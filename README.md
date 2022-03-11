@@ -1,1 +1,1 @@
-# latent-energy-shaping
+# optimal-cycle-shaping
