@@ -24,11 +24,12 @@ class OptEigManifoldLearner(pl.LightningModule):
 
     def training_step(self, batch, batch_idx):
         # Solve the ODE forward in time for T seconds
-        xTl = self.forward(torch.cat([self.u0, torch.zeros(1, self.spatial_dim + 1).cuda()], dim=1))
+        init_cond = torch.cat([self.u0, torch.zeros(1, self.spatial_dim + 1).cuda()], dim=1)
+        xTl = self.forward(init_cond)
         xT, l = xTl[:, :2], xTl[:, -1:]
 
         # Compute loss
-        periodicity_loss = torch.norm(self.u0.squeeze(0) - torch.tensor(xT[-1, 0]).cuda()) ** 2
+        periodicity_loss = torch.norm(init_cond.squeeze(0)[0:2*self.spatial_dim] - xT[-1, :].cuda()) ** 2
         integral_task_loss = self.model.f.T[0] * torch.mean(l)
         non_integral_task_loss = self.non_integral_task_loss(xT)
         loss = self.l_period * periodicity_loss + self.l_task_loss * integral_task_loss + non_integral_task_loss

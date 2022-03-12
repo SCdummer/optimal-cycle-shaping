@@ -1,5 +1,6 @@
 import sys ; sys.path.append('')
 import matplotlib.pyplot as plt
+import copy
 
 from src.control.utils import prior_dist, target_dist, dummy_trainloader, weighted_log_likelihood_loss
 from src.opt_limit_cycle_control.models import ControlledSystemNoDamping, AugmentedDynamics
@@ -57,19 +58,24 @@ f = ControlledSystemNoDamping(V).to(device)
 aug_f = AugmentedDynamics(f, ControlEffort(f))
 
 # Train the Energy shaping controller
-learn = OptEigManifoldLearner(aug_f, CloseToPositions(torch.tensor([[0.1], [0.2]])), 20.0, 0.01).cuda()
+learn = OptEigManifoldLearner(aug_f, CloseToPositions(torch.tensor([[0.1], [0.2]])), 0.02, 0.0000001).cuda()
 print("\n")
 print("Starting u0: ", learn.u0)
 print("Starting T: ", learn.model.f.T)
+print(learn.model.f.parameters())
+initial_weights = copy.deepcopy([params for params in learn.model.f.parameters()])
 print("\n")
 learn.lr = 5e-3
 logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
 
-trainer = pl.Trainer(max_epochs=2, logger=logger, gpus=[0])
+trainer = pl.Trainer(max_epochs=10, logger=logger, gpus=[0])
 trainer.fit(learn)
 print("\n")
 print("Final u0: ", learn.u0)
 print("Final T: ", learn.model.f.T)
+final_weights = [params for params in learn.model.f.parameters()]
+difference = [final_weights[i].cuda() - initial_weights[i].cuda() for i in range(len(initial_weights))]
+print("Final weights - initial weights:", sum([torch.norm(diff) for diff in difference]))
 
 # Plotting the final results.
 xT = odeint(learn.model.f.cuda(), torch.cat([learn.u0, torch.zeros(learn.u0.size()).cuda()], dim=1).cuda(),
