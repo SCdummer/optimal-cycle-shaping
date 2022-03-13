@@ -1,18 +1,29 @@
 import torch
 from torch.utils import data as data
 from torch.distributions import MultivariateNormal, Uniform, Normal
+from pytorch_lightning import LightningDataModule
 
-def dummy_trainloader():
-    # dummy trainloader for Lightning learner
-    dummy = data.DataLoader(
-        data.TensorDataset(
-            torch.Tensor(1, 1),
-            torch.Tensor(1, 1)
-        ),
-        batch_size=1,
-        shuffle=False
-    )
-    return dummy
+
+class DummyDataModule(LightningDataModule):
+    def __init__(
+        self,
+        num_samples: int = 1
+    ):
+        super().__init__()
+        self.num_samples = num_samples
+
+    def train_dataloader(self):
+        # dummy trainloader for Lightning learner
+        dummy = data.DataLoader(
+            data.TensorDataset(
+                torch.arange(self.num_samples, dtype=torch.float32).view(self.num_samples, 1)
+            ),
+            batch_size=1,
+            shuffle=False
+        )
+
+        return dummy
+
 
 def log_likelihood_loss(x, target):
     # negative log likelihood loss

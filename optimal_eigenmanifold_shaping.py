@@ -5,6 +5,7 @@ import copy
 from src.control.utils import prior_dist, target_dist, dummy_trainloader, weighted_log_likelihood_loss
 from src.opt_limit_cycle_control.models import ControlledSystemNoDamping, AugmentedDynamics
 from src.opt_limit_cycle_control.learners import OptEigManifoldLearner
+from src.opt_limit_cycle_control.utils import DummyDataModule
 
 import torch
 import torch.nn as nn
@@ -68,8 +69,10 @@ print("\n")
 learn.lr = 5e-3
 logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
 
-trainer = pl.Trainer(max_epochs=10, logger=logger, gpus=[0])
-trainer.fit(learn)
+trainer = pl.Trainer(max_epochs=500, logger=logger, gpus=[0])
+datloader = DummyDataModule(7)
+
+trainer.fit(learn, datloader)
 print("\n")
 print("Final u0: ", learn.u0)
 print("Final T: ", learn.model.f.T)
