@@ -1,15 +1,13 @@
-import sys ; sys.path.append('')
-import matplotlib.pyplot as plt
-import copy
+import sys
+sys.path.append('')
 
-from src.control.utils import prior_dist, target_dist, dummy_trainloader, weighted_log_likelihood_loss
-from src.opt_limit_cycle_control.models import ControlledSystemNoDamping, AugmentedDynamics
-from src.opt_limit_cycle_control.learners import OptEigManifoldLearner
+from src.opt_limit_cycle_control.models import ControlledSystemNoDamping, AugmentedDynamics, ControlledSystemDoublePendulum, AugmentedDynamicsDoublePendulum
+from src.opt_limit_cycle_control.learners import OptEigManifoldLearner, ControlEffort, CloseToPositions
 from src.opt_limit_cycle_control.utils import DummyDataModule
+from src.opt_limit_cycle_control.plotter import plot_trajectories
 
 import torch
 import torch.nn as nn
-import numpy as np
 
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
@@ -18,77 +16,75 @@ from torchdiffeq import odeint
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
+pendulum = True
 
-# Define the Integral Cost Function
-class ControlEffort(nn.Module):
-    # control effort integral cost
-    def __init__(self, f):
-        super().__init__()
-        self.f = f
-    def forward(self, t, x):
-        with torch.set_grad_enabled(True):
-            q = x[:,:1].requires_grad_(True)
-            u = self.f._energy_shaping(q)
-        return torch.abs(u)
+if pendulum:
+    v_in = 1
+    v_out = 1
+    hdim = 256
+    training_epochs = 150
+    lr = 5e-3
+    spatial_dim = 1
+    opt_strategy = 2
+    l_period_k = 1.0
+    l_task_k = 0.0
+    l_task_2_k = 10.0
 
+    # angular targets for q1
+    target = [-0.57, 0.57]
 
-# Define the non-integral cost function
-class CloseToPositions(nn.Module):
-    # Given a time series as input, this cost function measures how close the average distance is to a set of points
-    def __init__(self, dest: torch.Tensor):
-        super().__init__()
-        self.dest = dest.reshape(-1, 1).cuda()
+    # vector field parametrized by a NN
+    V = nn.Sequential(
+        nn.Linear(v_in, hdim),
+        nn.Softplus(),
+        nn.Linear(hdim, hdim),
+        nn.Tanh(),
+        nn.Linear(hdim, v_out))
 
-    def forward(self, xt):
-        return torch.max(torch.abs(torch.min(xt[:, 0] - self.dest, dim=1)[0]))
+    f = ControlledSystemNoDamping(V).to(device)
+    aug_f = AugmentedDynamics(f, ControlEffort(f))
+else:
+    v_in = 2
+    v_out = 2
+    hdim = 64
+    training_epochs = 200
+    lr = 5e-3
+    spatial_dim = 2
+    opt_strategy = 1
+    l_period_k = 1.0
+    l_task_k = 0.0
+    l_task_2_k = 1.0
 
+    # angular targets for q1 and q2
+    target = [-0.57, 0.57, 0.57, 0.0]
 
-# Define NNs and model
-# vector field parametrized by a NN
-hdim = 64
-V = nn.Sequential(
-          nn.Linear(1, hdim),
-          nn.Softplus(),
-          nn.Linear(hdim, hdim),
-          nn.Tanh(),
-          nn.Linear(hdim, 1))
+    # vector field parametrized by a NN
+    V = nn.Sequential(
+        nn.Linear(v_in, hdim),
+        nn.Softplus(),
+        nn.Linear(hdim, hdim),
+        nn.Tanh(),
+        nn.Linear(hdim, v_out))
+        #,
+        #nn.Tanh())
 
-# for p in V[-1].parameters(): torch.nn.init.zeros_(p)
-
-f = ControlledSystemNoDamping(V).to(device)
-aug_f = AugmentedDynamics(f, ControlEffort(f))
+    f = ControlledSystemDoublePendulum(V).to(device)
+    aug_f = AugmentedDynamicsDoublePendulum(f, ControlEffort(f))
 
 # Train the Energy shaping controller
-learn = OptEigManifoldLearner(aug_f, CloseToPositions(torch.tensor([[0.1], [0.2]])), 0.02, 0.0000001).cuda()
-print("\n")
-print("Starting u0: ", learn.u0)
-print("Starting T: ", learn.model.f.T)
-print(learn.model.f.parameters())
-initial_weights = copy.deepcopy([params for params in learn.model.f.parameters()])
-print("\n")
-learn.lr = 5e-3
+learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositions(target), l_period=l_period_k,
+                              l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy, spatial_dim=spatial_dim, lr=lr).cuda()
+
 logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
 
-trainer = pl.Trainer(max_epochs=500, logger=logger, gpus=[0])
+trainer = pl.Trainer(max_epochs=training_epochs, logger=logger, gpus=[0])
 datloader = DummyDataModule(7)
 
-trainer.fit(learn, datloader)
-print("\n")
-print("Final u0: ", learn.u0)
-print("Final T: ", learn.model.f.T)
-final_weights = [params for params in learn.model.f.parameters()]
-difference = [final_weights[i].cuda() - initial_weights[i].cuda() for i in range(len(initial_weights))]
-print("Final weights - initial weights:", sum([torch.norm(diff) for diff in difference]))
+trainer.fit(learn, train_dataloader=datloader)
 
 # Plotting the final results.
 xT = odeint(learn.model.f.cuda(), torch.cat([learn.u0, torch.zeros(learn.u0.size()).cuda()], dim=1).cuda(),
             torch.linspace(0, 1, 1000).cuda(), method='midpoint').squeeze(1).cpu().detach().numpy()
 
-fig, ax = plt.subplots()
-
-ax.plot(xT[:, 0], xT[:, 1])
-ax.set_title('Plot in phase space of the found solution')
-ax.set_xlabel('position (q)')
-ax.set_ylabel('momentum (p)')
-
-plt.show()
+plot_trajectories(xT, target, l1=1, l2=1, pendulum=pendulum, plot3D=False)
+print('Job is done!')

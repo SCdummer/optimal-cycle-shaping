@@ -130,3 +130,12 @@ dmypy.json
 
 # wandb logs
 wandb/
+
+# checkpoints
+pend_adjoint/
+
+# figures
+Figures/
+
+*.xml
+*.iml
