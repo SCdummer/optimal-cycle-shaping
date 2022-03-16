@@ -130,13 +130,13 @@ class OptEigManifoldLearner(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.optimizer_strategy == 1.0:
-            params = [{'params': self.model.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
+            params = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
             optimizer = torch.optim.Adam(params)
             scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=.999)
             return ({"optimizer": optimizer, "lr_scheduler": scheduler, "frequency": 1})
         else:
-            params1 = [{'params': self.model.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
-            params2 = [{'params': self.model.f.T, 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
+            params1 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
+            params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
             optimizer1 = torch.optim.Adam(params1)
             optimizer2 = torch.optim.Adam(params2)
             scheduler1 = torch.optim.lr_scheduler.ExponentialLR(optimizer1, gamma=.999)
@@ -174,7 +174,7 @@ class CloseToPositions(nn.Module):
     def forward(self, xt):
         # xt[:, 0] for pendulum
         if xt.shape[1] == 2:
-            return torch.max(torch.square(torch.min(xt[:, 0] - self.dest[0:2], dim=1)[0]))
+            return torch.max(torch.min(torch.square(xt[:, 0] - self.dest[0:2]),dim=1)[0])
         else:
-            return torch.max(torch.square(torch.min(xt[:, 0] - self.dest[0:2], dim=1)[0])) + \
-                   torch.max(torch.square(torch.min(xt[:, 1] - self.dest[2:4], dim=1)[0]))
+            return torch.max(torch.min(torch.square(xt[:, 0] - self.dest[0:2]), dim=1)[0]) + \
+                   torch.max(torch.min(torch.square(xt[:, 1] - self.dest[2:4]), dim=1)[0])
