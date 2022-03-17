@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation, PillowWriter, ImageMagickWriter, HTMLWriter, FFMpegWriter, ImageMagickFileWriter
-import seaborn as sns
-
 
 
 def plot_trajectories(xT, target, l1=1, l2=2, pendulum=True, plot3D=False):

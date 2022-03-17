@@ -22,13 +22,13 @@ if pendulum:
     v_in = 1
     v_out = 1
     hdim = 256
-    training_epochs = 150
-    lr = 5e-3
+    training_epochs = 250
+    lr = 1e-3
     spatial_dim = 1
-    opt_strategy = 2
+    opt_strategy = 1
     l_period_k = 1.0
     l_task_k = 0.0
-    l_task_2_k = 10.0
+    l_task_2_k = 1.0
 
     # angular targets for q1
     target = [-0.57, 0.57]

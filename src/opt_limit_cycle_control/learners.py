@@ -24,6 +24,12 @@ class OptEigManifoldLearner(pl.LightningModule):
     def forward(self, x):
         return self.odeint(self.model, x, torch.linspace(0, 1, 100).cuda(), method='midpoint').squeeze(1)
 
+    def periodicity_loss(self, init_cond, xT):
+        vector_field = self.model.f(torch.linspace(0, 1, 100).cuda(), xT)[:, 0:self.spatial_dim].view(-1, self.spatial_dim)
+        avg_variance = torch.mean(torch.var(vector_field, dim=0))
+        periodicity_loss = torch.norm(init_cond.squeeze(0)[0:2*self.spatial_dim] - xT[-1, :].cuda()) ** 2
+        return periodicity_loss * (1 + 1/avg_variance)
+
     def _training_step1(self, batch, batch_idx):
         # Solve the ODE forward in time for T seconds
         init_cond = torch.cat([self.u0, torch.zeros(1, self.spatial_dim + 1).cuda()], dim=1)
@@ -31,7 +37,7 @@ class OptEigManifoldLearner(pl.LightningModule):
         xT, l = xTl[:, :-1], xTl[:, -1:]
 
         # Compute loss
-        periodicity_loss = self.l_period * torch.norm(init_cond.squeeze(0)[0:2*self.spatial_dim] - xT[-1, :].cuda()) ** 2
+        periodicity_loss = self.l_period * self.periodicity_loss(init_cond, xT)
         integral_task_loss = self.l_task_loss * torch.abs(self.model.f.T[0]) * torch.mean(l)
         non_integral_task_loss = self.l_task_loss_2 * self.non_integral_task_loss(xT)
         loss = periodicity_loss + integral_task_loss + non_integral_task_loss
@@ -96,7 +102,7 @@ class OptEigManifoldLearner(pl.LightningModule):
 
         else:
             loss_type = "periodicity loss"
-            periodicity_loss = self.l_period * torch.norm(init_cond.squeeze(0)[0:2 * self.spatial_dim] - xT[-1, :].cuda()) ** 2
+            periodicity_loss = self.l_period * self.periodicity_loss(init_cond, xT)
             loss = periodicity_loss
             print('                      ')
             print('                      ')

@@ -16,7 +16,7 @@ class ControlledSystemNoDamping(nn.Module):
     def forward(self, t, x):
         # Evaluates the closed-loop vector field
         with torch.set_grad_enabled(True):
-            q, p = x[..., 0], x[..., 1]
+            q, p = x[..., 0].view(-1, self.n), x[..., 1].view(-1, self.n)
             q = q.requires_grad_(True)
             # compute control action
             u = self._energy_shaping(q)
@@ -29,7 +29,7 @@ class ControlledSystemNoDamping(nn.Module):
         # controlled elastic pendulum dynamics
         dqdt = p / m
         dpdt = -k * (q - qr) - m * g * l * torch.sin(q) - b * p / m + u
-        return torch.cat([dqdt, dpdt])
+        return torch.cat([dqdt, dpdt], dim=1)
 
     def _energy_shaping(self, q):
         # energy shaping control action
@@ -59,9 +59,8 @@ class AugmentedDynamics(nn.Module):
         self.nfe += 1
         x = x[:,:2]
         dxdt = self.f(t, x)
-        dldt = self.int_loss(t, x)
-        return torch.cat([dxdt, dldt])
-
+        dldt = self.int_loss(t, x).view(-1, self.f.n)
+        return torch.cat([dxdt, dldt], dim=1)
 
 
 class ControlledSystemDoublePendulum(nn.Module):
