@@ -2,6 +2,7 @@ import torch
 from torch.utils import data as data
 from torch.distributions import MultivariateNormal, Uniform, Normal
 from pytorch_lightning import LightningDataModule
+import numpy as np
 
 
 class DummyDataModule(LightningDataModule):
