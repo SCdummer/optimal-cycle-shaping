@@ -2,8 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation, PillowWriter, ImageMagickWriter, HTMLWriter, FFMpegWriter, ImageMagickFileWriter
 
+m, l, g = 1., 1, 9.81
 
-def plot_trajectories(xT, target, l1=1, l2=2, pendulum=True, plot3D=False):
+def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3D=False):
 
     if pendulum:
         if plot3D==False:
@@ -23,6 +24,12 @@ def plot_trajectories(xT, target, l1=1, l2=2, pendulum=True, plot3D=False):
             xt2 = l1 * np.sin(target[1])
             yt2 = -l1 * np.cos(target[1])
 
+            xall = l1 * np.sin(angles)
+            yall = -l1 * np.cos(angles)
+
+            # compute gravitational potential energy
+            Vg = m * l1 * np.sin(angles)
+
             c1 = plt.cm.magma(np.linspace(0, 1, xT.shape[0], endpoint=False))
 
             def animate(i, x1, y1, o, c1, xt1, yt1, xt2, yt2):
@@ -39,13 +46,64 @@ def plot_trajectories(xT, target, l1=1, l2=2, pendulum=True, plot3D=False):
 
             gif = FuncAnimation(fig, animate, fargs=(x1, y1, o, c1, xt1, yt1, xt2, yt2),
                                 blit=False, repeat=True, frames=xT.shape[0], interval=1)
-            gif.save("Figures/PendulumTrajectory.gif", dpi=150, writer=PillowWriter(fps=30))
+            gif.save("Figures/PendulumTrajectory_.gif", dpi=150, writer=PillowWriter(fps=30))
             ax.clear()
 
             p1 = ax.scatter(x1, y1, c=np.linspace(0, 1, xT.shape[0], endpoint=False),
                             cmap='magma', s=10)
+            ax.scatter(xt1, yt1, c='g', s=30, marker='x')
+            ax.scatter(xt2, yt2, c='b', s=30, marker='x')
+            ax.set_xlim(-1.5, 1.5)
+            ax.set_ylim(-1.5, 1.5)
             fig.colorbar(p1)
             plt.savefig('Figures/PendulumTrajectory')
+
+            fig2 = plt.figure()
+            ax2 = plt.axes()
+            p2 = ax2.scatter(xall, yall, c=V, cmap='magma', s=15)
+            pt1 = ax2.scatter(xt1, yt1, c='g', s=30, marker='x')
+            pt2 = ax2.scatter(xt2, yt2, c='b', s=30, marker='x')
+            fig2.colorbar(p2)
+            plt.savefig('Figures/Potential')
+
+            fig3 = plt.figure()
+            ax3 = plt.axes()
+            p3 = ax3.scatter(xall, yall, c=u, cmap='magma', s=15)
+            ax3.scatter(xt1, yt1, c='g', s=30, marker='x')
+            ax3.scatter(xt2, yt2, c='b', s=30, marker='x')
+            fig3.colorbar(p3)
+            plt.savefig('Figures/ControlInput')
+
+            t = np.linspace(0, 1, angles.shape[0])
+            fig4 = plt.figure()
+            ax4 = plt.axes()
+            ax4.scatter(target[0], 0, c='g', s=30, marker='x')
+            ax4.scatter(target[1], 0, c='b', s=30, marker='x')
+            p7 = ax4.scatter(angles, V + Vg, c=t, cmap='RdYlGn', s=3, label='V total')
+            p5 = ax4.scatter(angles, Vg, c=t, cmap='magma', s=7, label='V gravity')
+            p6 = ax4.scatter(angles, V, c=t, cmap='rainbow', s=7, label='V learned')
+            ax4.legend()
+            fig4.colorbar(p5)
+            fig4.colorbar(p6)
+            fig4.colorbar(p7)
+            fig4.tight_layout()
+            plt.savefig('Figures/Learned_Gravitational_Potential')
+
+            t = np.linspace(0, 1, 1000)
+            q = np.linspace(np.min(xT[:,0]), np.max(xT[:,0]), 1000)
+            fig4 = plt.figure()
+            ax4 = plt.axes()
+            ax4.scatter(target[0], 0, c='g', s=30, marker='x')
+            ax4.scatter(target[1], 0, c='b', s=30, marker='x')
+            p7 = ax4.scatter(q, V + Vg, c=t, cmap='RdYlGn', s=3, label='V total')
+            p5 = ax4.scatter(q, Vg, c=t, cmap='magma', s=7, label='V gravity')
+            p6 = ax4.scatter(q, V, c=t, cmap='rainbow', s=7, label='V learned')
+            ax4.legend()
+            fig4.colorbar(p5)
+            fig4.colorbar(p6)
+            fig4.colorbar(p7)
+            fig4.tight_layout()
+            plt.savefig('Figures/Learned_Gravitational_Potential_Interval')
 
         else:
             pass
@@ -70,8 +128,8 @@ def plot_trajectories(xT, target, l1=1, l2=2, pendulum=True, plot3D=False):
             yt2 = yt1 - l2 * np.cos(target[2])
             xt3 = l1 * np.sin(target[1])
             yt3 = -l1 * np.cos(target[1])
-            xt4 = xt1 + l2 * np.sin(target[3])
-            yt4 = yt1 - l2 * np.cos(target[3])
+            xt4 = xt3 + l2 * np.sin(target[3])
+            yt4 = yt3 - l2 * np.cos(target[3])
 
             c1 = plt.cm.magma(np.linspace(0, 1, xT.shape[0], endpoint=False))
             c2 = plt.cm.rainbow(np.linspace(0, 1, xT.shape[0], endpoint=False))
@@ -101,9 +159,47 @@ def plot_trajectories(xT, target, l1=1, l2=2, pendulum=True, plot3D=False):
                             cmap='magma', s=10)
             p2 = ax.scatter(x2, y2, c=np.linspace(0, 1, xT.shape[0], endpoint=False),
                             cmap='rainbow', s=10)
+            ax.set_xlim(-2.5, 2.5)
+            ax.set_ylim(-2.5, 2.5)
             fig.colorbar(p1)
             fig.colorbar(p2)
             plt.savefig('Figures/DoublePendulumTrajectory')
+
+            t = np.linspace(0, 1, angles.shape[0])
+            fig4 = plt.figure()
+            ax4 = plt.axes()
+            ax4.scatter(target[0], 0, c='g', s=30, marker='x')
+            ax4.scatter(target[1], 0, c='g', s=30, marker='x')
+            ax4.scatter(target[2], -1, c='b', s=30, marker='x')
+            ax4.scatter(target[3], -1, c='b', s=30, marker='x')
+            p7 = ax4.scatter(angles[:, 0], V[:,0], c=t, cmap='rainbow', s=3, label='V1')
+            p5 = ax4.scatter(angles[:, 1], V[:,1], c=t, cmap='magma', s=7, label='V2')
+            #p6 = ax4.scatter(angles, V, c=t, cmap='rainbow', s=7, label='V learned')
+            ax4.legend()
+            fig4.colorbar(p5)
+            #fig4.colorbar(p6)
+            fig4.colorbar(p7)
+            fig4.tight_layout()
+            plt.savefig('Figures/DoublePendulumLearned_Potential')
+
+            t = np.linspace(0, 1, 1000)
+            q = np.linspace(np.min(xT[:,0]), np.max(xT[:,0]), 1000)
+            q1 = np.linspace(np.min(xT[:,1]), np.max(xT[:,1]), 1000)
+            fig4 = plt.figure()
+            ax4 = plt.axes()
+            ax4.scatter(target[0], 0, c='g', s=30, marker='x')
+            ax4.scatter(target[1], 0, c='g', s=30, marker='x')
+            ax4.scatter(target[2], -1, c='b', s=30, marker='x')
+            ax4.scatter(target[3], -1, c='b', s=30, marker='x')
+            p7 = ax4.scatter(q, V[:,0], c=t, cmap='rainbow', s=3, label='V total')
+            p5 = ax4.scatter(q1, V[:,1], c=t, cmap='magma', s=7, label='V gravity')
+            #p6 = ax4.scatter(q, V, c=t, cmap='rainbow', s=7, label='V learned')
+            ax4.legend()
+            fig4.colorbar(p5)
+            #fig4.colorbar(p6)
+            fig4.colorbar(p7)
+            fig4.tight_layout()
+            plt.savefig('Figures/DoublePendulumLearned_Potential_Interval')
 
         else:
             pass
