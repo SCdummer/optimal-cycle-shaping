@@ -11,7 +11,7 @@ class ControlledSystemNoDamping(nn.Module):
     # Elastic Pendulum Model
     def __init__(self, V):
         super().__init__()
-        self.V, self.T, self.n = V, torch.nn.Parameter(torch.tensor([1.0])), 1
+        self.V, self.T, self.n = V, torch.tensor([1.0]).cuda(), 1
 
     def forward(self, t, x):
         # Evaluates the closed-loop vector field
@@ -21,7 +21,7 @@ class ControlledSystemNoDamping(nn.Module):
             # compute control action
             u = self._energy_shaping(q)
             # compute dynamics
-            dxdt = torch.abs(self.T[0]) * self._dynamics(q, p, u)
+            dxdt = self.T[0] * self._dynamics(q, p, u)
 
         return dxdt
 

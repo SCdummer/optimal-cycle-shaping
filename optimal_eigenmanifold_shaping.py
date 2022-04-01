@@ -2,7 +2,7 @@ import sys
 sys.path.append('')
 
 from src.opt_limit_cycle_control.models import ControlledSystemNoDamping, AugmentedDynamics, ControlledSystemDoublePendulum, AugmentedDynamicsDoublePendulum
-from src.opt_limit_cycle_control.learners import OptEigManifoldLearner, ControlEffort, CloseToPositions
+from src.opt_limit_cycle_control.learners import OptEigManifoldLearner, ControlEffort, CloseToPositions, CloseToPositionsAtTime
 from src.opt_limit_cycle_control.utils import DummyDataModule
 from src.opt_limit_cycle_control.plotter import plot_trajectories
 
@@ -22,12 +22,12 @@ if pendulum:
     v_in = 1
     v_out = 1
     hdim = 256
-    training_epochs = 250
-    lr = 1e-3
+    training_epochs = 500
+    lr = 5e-3
     spatial_dim = 1
     opt_strategy = 1
     l_period_k = 1.0
-    l_task_k = 0.0
+    l_task_k = 0.0005
     l_task_2_k = 1.0
 
     # angular targets for q1
@@ -72,8 +72,13 @@ else:
     aug_f = AugmentedDynamicsDoublePendulum(f, ControlEffort(f))
 
 # Train the Energy shaping controller
-learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositions(target), l_period=l_period_k,
-                              l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy, spatial_dim=spatial_dim, lr=lr).cuda()
+times = torch.Tensor([0.25, 0.75]).cuda()
+# learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositions(target), l_period=l_period_k,
+#                               l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy, spatial_dim=spatial_dim, lr=lr,
+#                               times=None)
+learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositionsAtTime(target), l_period=l_period_k,
+                              l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy, spatial_dim=spatial_dim, lr=lr,
+                              times=times)
 
 logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
 
