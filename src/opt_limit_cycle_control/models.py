@@ -109,18 +109,27 @@ class ControlledSystemDoublePendulum(nn.Module):
         q2 = q[:,1].unsqueeze(-1)
         p1 = p[:,0].unsqueeze(-1)
         p2 = p[:,1].unsqueeze(-1)
-        # controlled elastic double pendulum dynamics
-        dq1dt = (l2 * p1 - l1 * p2 * torch.cos(q1-q2)) / (l1**2 * l2 * (m1 + m2 * torch.sin(q1-q2)**2))
-        dq2dt = (-m2 * l2 * p1 * torch.cos(q1-q2) + (m1 + m2) * l1 * p2) / (m2 * l1 * l2**2 * (m1 + m2 * torch.sin(q1-q2)**2))
+        # OLD controlled elastic double pendulum dynamics: (no spring, no damping)
+        #dq1dt = (l2 * p1 - l1 * p2 * torch.cos(q1-q2)) / (l1**2 * l2 * (m1 + m2 * torch.sin(q1-q2)**2))
+        #dq2dt = (-m2 * l2 * p1 * torch.cos(q1-q2) + (m1 + m2) * l1 * p2) / (m2 * l1 * l2**2 * (m1 + m2 * torch.sin(q1-q2)**2))
 
-        h1 = (p1 * p2 * torch.sin(q1-q2)) / (l1 * l2 * ((m1 + m2 * torch.sin(q1-q2)**2)))
-        h2 = (m2 * l2**2 * p1**2 + (m1 + m2) * l1**2 * p2**2 - 2 * m2 * l1 * l2 * p1 * p2 * torch.cos(q1-q2)) / (2 * l1**2 * l2**2 * (m1 + m2 * torch.sin(q1-q2)**2))
+        #h1 = (p1 * p2 * torch.sin(q1-q2)) / (l1 * l2 * ((m1 + m2 * torch.sin(q1-q2)**2)))
+        #h2 = (m2 * l2**2 * p1**2 + (m1 + m2) * l1**2 * p2**2 - 2 * m2 * l1 * l2 * p1 * p2 * torch.cos(q1-q2)) / (2 * l1**2 * l2**2 * (m1 + m2 * torch.sin(q1-q2)**2))
 
 
-        dp1dt = -(m1 + m2) * g * l1 * torch.sin(q1) - h1 + h2 * torch.sin(2 * (q1-q2)) + u1
-        dp2dt = -m2 * g * l2 * torch.sin(q2) + h1 - h2 * torch.sin(2 * (q1-q2)) + u2
+        #dp1dt = -(m1 + m2) * g * l1 * torch.sin(q1) - h1 + h2 * torch.sin(2 * (q1-q2)) + u1
+        #dp2dt = -m2 * g * l2 * torch.sin(q2) + h1 - h2 * torch.sin(2 * (q1-q2)) + u2
 
-        # TODO: add spring and damping to these equations
+        # NEW controlled elastic pendulum dynamics: (one spring, no damping)
+        DET = (l1**2 * l2**2 * m2**2 * (-torch.cos(q2)**2) + l1**2 * l2**2 * m2**2 + l1**2 * l2**2 * m1 * m2)
+
+        dq1dt = (l2**2 * m2 * p1) / DET - (l2 * m2 * p2 * (l1 * torch.cos(q2) + l2)) / DET
+        dq2dt = (p2 * (2 * l2 * l1 * m2 * torch.cos(q2) + l1**2 * (m1 + m2) + l2**2 * m2))/ DET - (l2 * m2 * p1 * (l1 * torch.cos(q2) + l2))/ DET
+
+        dp1dt = (-g) * (torch.sin(q1 + q2) * l2 * m2 + torch.sin(q1) * l1 * (m1 + m2)) + u1
+        dp2dt = k_1 * (torch.pi - 2*q2) - l2 * m2 * (g * torch.sin(q1 + q2) - torch.sin(q2) * l1 * dq1dt * (dq1dt + dq2dt)) + u2
+
+        
 
         return torch.cat([dq1dt, dq2dt, dp1dt, dp2dt], dim=1)
 
