@@ -12,7 +12,11 @@ class OptEigManifoldLearner(pl.LightningModule):
         super().__init__()
         self.model = model
         self.spatial_dim = spatial_dim
-        self.u0 = torch.randn(1, self.spatial_dim).cuda()
+        u0 = 0.0
+        if spatial_dim == 2:
+            u0 = [0.0, 0.0]
+        self.u0 = torch.tensor(u0).view(1, self.spatial_dim).cuda()
+        #self.u0 = torch.randn(1, self.spatial_dim).cuda()
         self.u0.requires_grad = True
         self.non_integral_task_loss = non_integral_task_loss_func
         self.times = times
@@ -29,14 +33,14 @@ class OptEigManifoldLearner(pl.LightningModule):
         assert min_period >= 0, "the minimum period should always be larger or equal to 0"
         assert max_period is None or max_period >= 0, "the maximum period should always be larger or equal to 0"
         if self.times is not None:
-            assert min_period <= min(times), "the minimum period should be smaller or equal to the smallest value in " \
+            assert min_period >= max(times), "the minimum period should be larger or equal to the largest value in " \
                                              "self.times"
             assert max_period is None or max_period >= max(times), "the maximum period should be larger or equal to the " \
                                                                    "largest value in self.times"
 
     def create_t_list(self, num_points, T):
         if self.times is not None:
-            output, inverse_indices = torch.unique(torch.cat([torch.linspace(0, 1, num_points).cuda(), self.times/T]),
+            output, inverse_indices = torch.unique(torch.cat([torch.linspace(0, 1, num_points).cuda(), self.times/T[0]]),
                                                    sorted=True, return_inverse=True)
             return output, inverse_indices[-self.num_times:]
         else:
@@ -46,9 +50,11 @@ class OptEigManifoldLearner(pl.LightningModule):
 
     def forward(self, x):
 
-        output, indices = self.create_t_list(100, self.model.f.T)
-        if hasattr(self.non_integral_task_loss, 'indices'):
-            self.non_integral_task_loss.indices = indices
+        with torch.no_grad():
+            output, indices = self.create_t_list(100, self.model.f.T)
+
+            if hasattr(self.non_integral_task_loss, 'indices'):
+                self.non_integral_task_loss.indices = indices
 
         return self.odeint(self.model, x, output.cuda(), method='midpoint').squeeze(1)
 
@@ -60,13 +66,11 @@ class OptEigManifoldLearner(pl.LightningModule):
         #return periodicity_loss * (1 + 1/max_diff)
         return periodicity_loss * (1 + 1/avg_variance)
 
-    def on_before_zero_grad(self, optimizer):
-        # if self.maxT is not None:
-        self.model.f.T = torch.clamp(torch.abs(self.model.f.T), self.minT, self.maxT)
-        #self.model.f.T = self.model.f.T + (new_T - self.model.f.T)
-        # else:
-        #     self.model.f.T = torch.abs(self.model.f.T - self.minT)
-        #     self.model.f.T += self.minT
+    def on_train_batch_start(self, batch, batch_idx, unused=0):
+        period = self.model.f.T.data
+        period = torch.abs(period)
+        period = period.clamp(self.minT, self.maxT)
+        self.model.f.T.data = period
 
     def _training_step1(self, batch, batch_idx):
         # Solve the ODE forward in time for T seconds
@@ -83,6 +87,7 @@ class OptEigManifoldLearner(pl.LightningModule):
         print('                      ')
         print('periodicity loss', periodicity_loss)
         print('task loss', non_integral_task_loss)
+        print('integral loss', integral_task_loss)
         print('                      ')
         # log training data
         self.logger.experiment.log(
@@ -119,6 +124,7 @@ class OptEigManifoldLearner(pl.LightningModule):
             print('                      ')
             print('                      ')
             print('task loss', non_integral_task_loss)
+            print('integral loss', integral_task_loss)
             print('                      ')
 
             # log training data
@@ -174,22 +180,24 @@ class OptEigManifoldLearner(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.optimizer_strategy == 1.0:
-            params = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
+            params = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr},
+                      {'params': self.u0, 'lr': self.lr}]
             optimizer = torch.optim.Adam(params)
             scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=.999)
             return ({"optimizer": optimizer, "lr_scheduler": scheduler, "frequency": 1})
         else:
             params1 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
-            params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
+            params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}]#, {'params': self.u0, 'lr': self.lr}]
             optimizer1 = torch.optim.Adam(params1)
             optimizer2 = torch.optim.Adam(params2)
             scheduler1 = torch.optim.lr_scheduler.ExponentialLR(optimizer1, gamma=.999)
             scheduler2 = torch.optim.lr_scheduler.ExponentialLR(optimizer2, gamma=.999)
-            return ({"optimizer": optimizer1, "lr_scheduler": scheduler1, "frequency": 1},
-                    {"optimizer": optimizer2, "lr_scheduler": scheduler2, "frequency": 1})
+            return ({"optimizer": optimizer1, "lr_scheduler": scheduler1, "frequency": 2},
+                    {"optimizer": optimizer2, "lr_scheduler": scheduler2, "frequency": 10})
 
     def train_dataloader(self):
         return dummy_trainloader()
+
 
 # Define the Integral Cost Function
 class ControlEffort(nn.Module):
@@ -212,16 +220,15 @@ class CloseToPositions(nn.Module):
     # Given a time series as input, this cost function measures how close the average distance is to a set of points
     def __init__(self, dest):
         super().__init__()
-        dest = torch.tensor(dest)
-        self.dest = dest.reshape(-1, 1).cuda()
+        self.dest = dest.cuda()
 
     def forward(self, xt):
         # xt[:, 0] for pendulum
         if xt.shape[1] == 2:
-            return torch.max(torch.min(torch.square(xt[:, 0] - self.dest[0:2]),dim=1)[0])
+            return torch.max(torch.min(torch.square(xt[:, 0] - self.dest), dim=1)[0])
         else:
-            return torch.max(torch.min(torch.square(xt[:, 0] - self.dest[0:2]), dim=1)[0]) + \
-                   torch.max(torch.min(torch.square(xt[:, 1] - self.dest[2:4]), dim=1)[0])
+            return torch.max(torch.min(torch.square(xt[:, 0] - self.dest[:, 0]), dim=1)[0]) + \
+                   torch.max(torch.min(torch.square(xt[:, 1] - self.dest[:, 1]), dim=1)[0])
 
 
 class CloseToPositionsAtTime(nn.Module):
@@ -229,14 +236,11 @@ class CloseToPositionsAtTime(nn.Module):
     # pre-specified times
     def __init__(self, dest):
         super().__init__()
-        self.dest = torch.tensor(dest).reshape(-1, 1).cuda()
+        self.dest = dest.cuda()
         self.indices = torch.empty(1)
 
     def forward(self, xt):
         # xt[:, 0] for pendulum
-        if xt.shape[1] == 2:
-            return torch.max(torch.norm(xt[self.indices, 0] - self.dest[0:2], dim=1) ** 2)
-        else:
-            return torch.max(torch.norm(xt[self.indices, 0] - self.dest[0:2], dim=1) ** 2) + \
-                   torch.max(torch.norm(xt[self.indices, 1] - self.dest[2:4], dim=1) ** 2)
+        return torch.sum(torch.sum(torch.abs(xt[self.indices, 0:2] - self.dest), dim=1))
+
 
