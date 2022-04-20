@@ -18,13 +18,13 @@ import numpy as np
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-pendulum = True
+pendulum = False
 
 if pendulum:
     v_in = 1
     v_out = 1
     hdim = 256
-    training_epochs = 2
+    training_epochs = 100
     lr = 1e-3
     spatial_dim = 1
     opt_strategy = 1
@@ -33,8 +33,13 @@ if pendulum:
     l_task_2_k = 1.0
 
     # angular targets for q1
-    target = [-0.5, 0.5]
-    times = None
+    target = torch.tensor([-0.5, 0.5]).reshape(2, 1).cuda()
+
+    # If we use the CloseToPosition loss, use times = None. If we use the CloseToPosition at times loss, specify the
+    # times at which we want to pass through the positions.
+
+    #times = None
+    times = torch.tensor([0.25, 0.75]).reshape(2).cuda()
 
     # vector field parametrized by a NN
     V = nn.Sequential(
@@ -72,8 +77,14 @@ else:
     indices = range(step_size, num_times-step_size, step_size)
 
     target = torch.Tensor(traj[indices, 0:2]).cuda()
-    times = torch.Tensor(time[indices, 0]).cuda()
 
+    # If we use the CloseToPosition loss, use times = None. If we use the CloseToPosition at times loss, specify the
+    # times at which we want to pass through the positions.
+
+    #times = torch.Tensor(time[indices, 0]).cuda()
+    times = None
+
+    # Create an animation of the chosen eigenmode
     if to_animate_eig_mode:
         animate_single_dp_trajectory(traj)
 
@@ -92,11 +103,17 @@ else:
     f = ControlledSystemDoublePendulum(V).to(device)
     aug_f = AugmentedDynamicsDoublePendulum(f, ControlEffort(f))
 
-# Train the Energy shaping controller
-min_period = max(times) if times is not None else 0
-learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositionsAtTime(target), l_period=l_period_k,
+# Train the Energy shaping controller. If you specify times, use CloseToPositionsAtTime and else use CloseToPositions
+# as task loss
+if times is None:
+    learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositions(target),
+                                  l_period=l_period_k,
+                                  l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
+                                  spatial_dim=spatial_dim, lr=lr)
+else:
+    learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositionsAtTime(target), l_period=l_period_k,
                               l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy, spatial_dim=spatial_dim, lr=lr,
-                              times=times, min_period=min_period)
+                              times=times, min_period=max(times))
 
 logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
 

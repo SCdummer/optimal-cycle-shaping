@@ -227,8 +227,10 @@ class CloseToPositions(nn.Module):
         if xt.shape[1] == 2:
             return torch.max(torch.min(torch.square(xt[:, 0] - self.dest), dim=1)[0])
         else:
-            return torch.max(torch.min(torch.square(xt[:, 0] - self.dest[:, 0]), dim=1)[0]) + \
-                   torch.max(torch.min(torch.square(xt[:, 1] - self.dest[:, 1]), dim=1)[0])
+            # return torch.max(torch.min(torch.square(xt[:, 0] - self.dest[:, 0].unsqueeze(1)), dim=1)[0]) + \
+            #        torch.max(torch.min(torch.square(xt[:, 1] - self.dest[:, 1].unsqueeze(1)), dim=1)[0])\
+            # return torch.max(torch.min(torch.sum(torch.square(xt[:, 0:2].unsqueeze(1) - self.dest), dim=2), dim=0)[0])
+            return torch.sum(torch.min(torch.sum(torch.square(xt[:, 0:2].unsqueeze(1) - self.dest), dim=2), dim=0)[0])
 
 
 class CloseToPositionsAtTime(nn.Module):
@@ -241,6 +243,9 @@ class CloseToPositionsAtTime(nn.Module):
 
     def forward(self, xt):
         # xt[:, 0] for pendulum
-        return torch.sum(torch.sum(torch.abs(xt[self.indices, 0:2] - self.dest), dim=1))
+        if xt.shape[1] == 2:
+            return torch.sum(torch.square(xt[self.indices, 0].unsqueeze(1) - self.dest))
+        else:
+            return torch.sum(torch.sum(torch.square(xt[self.indices, 0:2] - self.dest), dim=1))
 
 
