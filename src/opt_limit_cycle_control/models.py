@@ -98,7 +98,7 @@ class ControlledSystemDoublePendulum(nn.Module):
                 p = torch.cat([p1, p2], dim=1)
                 u = self._energy_shaping(q)
                 # compute dynamics
-                dxdt = torch.abs(self.T[0]) * self._dynamics(q, p, u)
+                dxdt = torch.abs(self.T[0])* self._dynamics(q, p, u)
 
         return dxdt
 

@@ -3,6 +3,8 @@ from torch.utils import data as data
 from torch.distributions import MultivariateNormal, Uniform, Normal
 from pytorch_lightning import LightningDataModule
 import numpy as np
+import os.path
+import scipy.io
 
 
 class DummyDataModule(LightningDataModule):
@@ -30,16 +32,19 @@ def log_likelihood_loss(x, target):
     # negative log likelihood loss
     return -torch.mean(target.log_prob(x))
 
+
 def weighted_log_likelihood_loss(x, target, weight):
     # weighted negative log likelihood loss
     log_prob = target.log_prob(x)
     weighted_log_p = weight * log_prob
     return -torch.mean(weighted_log_p.sum(1))
 
+
 def weighted_L2_loss(xh, x, weight):
     # weighted squared error loss
     e = xh - x
     return torch.einsum('ij, jk, ik -> i', e, weight, e).mean()
+
 
 def prior_dist(q_min, q_max, p_min, p_max, device='cpu'):
     # uniform "prior" distribution of initial conditions x(0)=[q(0),p(0)]
@@ -47,19 +52,23 @@ def prior_dist(q_min, q_max, p_min, p_max, device='cpu'):
     ub = torch.Tensor([q_max, p_max]).to(device)
     return Uniform(lb, ub)
 
+
 def target_dist(mu, sigma, device='cpu'):
     # normal target distribution of terminal states x(T)
     mu, sigma = torch.Tensor(mu).reshape(1, 2).to(device), torch.Tensor(sigma).reshape(1, 2).to(device)
     return Normal(mu, torch.sqrt(sigma))
+
 
 def multinormal_target_dist(mu, sigma, device='cpu'):
     # normal target distribution of terminal states x(T)
     mu, sigma = torch.Tensor(mu).to(device), torch.Tensor(sigma).to(device)
     return MultivariateNormal(mu, sigma*torch.eye(mu.shape[0]).to(device))
 
+
 def PoU_S1(q):
     # Partition of unity for one chart of circle (other is 1 minus this)
     return 1/2*(1+np.cos(q))
+
 
 def PoU_Sn(q_Sn):
     # Extension of PoU_S1 to the 2**n chart-regions of the n-Torus
@@ -79,6 +88,7 @@ def PoU_Sn(q_Sn):
     
     return PoU_Fin
 
+
 def ind(i,N):
     if i == 0:
         ind1 = np.array([i for i in range(int(N/2))])                           # first half
@@ -86,6 +96,7 @@ def ind(i,N):
         ind1 = ind(i-1,N/2);                                                    # find first half of first half
         ind1 = np.concatenate((ind1,ind1+N/2))
     return ind1
+
 
 def chart_Sn(q_Sn):
     # local diffeomorphism: globally surjective, but not injective
@@ -103,8 +114,81 @@ def chart_Sn(q_Sn):
 
     return q_all
 
+
 def chart_inv_Sn(q_all):
     # inverse unique if for all i: |q_Sn[i]| < pi  
     return q_all[0,:]
-    
+
+
+def load_eig_mode_double_pendulum(n, k, i):
+    """"
+    This function loads a precalculated eigenmode of the double pendulum.
+    Inputs:
+    - n:        This determines which of the two eigenmanifolds we pick. The value can be 1 or 2.
+    - k:        This determines the value of k we use. What this value is depends on the files present in
+                DP_Eigenmodes/DP_Eigenmodes. If Trajectories_DP_k_k.mat is present, we can use the value of k. E.g. if
+                Trajectories_DP_k_0.mat is present, we can use k = 0.
+    - i:        This takes the ith trajectory in the list of trajectories on the eigenmanifold.
+
+    Output:
+    - time:     A (t_points, 1) numpy array containing the times at which we sample the trajectory. Here we have
+                that t_points is the number of time points at which we sample.
+    - traj:     A (t_points, 4) numpy array with:
+                - column 1: q1
+                - column 2: q2
+                - column 3: dq1/dt
+                - column 4: dq2/dt
+                Here t_points again corresponds to the number of time points at which we sample these values.
+
+    NOTE: traj[i,:] is sampled at time time[i,:]
+
+    """
+
+    # Checking whether the value of n is correct
+    if not (n == 1 or n == 2):
+        raise ValueError("The value of n should be 1 or 2")
+
+    # Getting the name of the file we want load
+    filename = "Trajectories_DP_k_".join(str(k)).join(".mat")
+
+    # Get exact location of the file
+    matfile_dir = os.path.join("DP_Eigenmodes/DP_Eigenmodes/", filename)
+
+    # Check whether any files exist at all in the directory. If not, give an error.
+    if len(os.listdir("DP_Eigenmodes/DP_Eigenmodes")) == 0:
+        raise FileNotFoundError("No files in the DP_Eigenmodes/DP_Eigenmodes directory")
+    else:
+        # Check wheter Trajectories_DP_k_k.mat files exist in the trajectory. If not, give an error.
+        found_file = False
+        for file in os.listdir("DP_Eigenmodes/DP_Eigenmodes"):
+            if file.startswith("Trajectories_DP_k"):
+                backup_file = file
+                found_file = True
+                break
+        if not found_file:
+            raise FileNotFoundError("No Trajectories_DP_k_k.mat file present in the directory")
+
+    # Check if the file for our specific value of k exists in the trajectory
+    if os.path.exists(matfile_dir):
+        matfile = scipy.io.loadmat(matfile_dir)
+    else:
+        # If not, use the backup file in the directory
+        matfile_dir = os.path.join("DP_Eigenmodes/DP_Eigenmodes/", backup_file)
+        filename = backup_file
+        Warning("The k you have chosen does not correspond to a Trajectories_DP_k_k.mat file in the " +
+                "DP_Eigenmodes/DP_Eigenmodes directory. We continue by using " + backup_file + " instead")
+        matfile = scipy.io.loadmat(os.path.join(matfile_dir))
+
+    # Check if the value of i is correct
+    if not (1 <= i <= matfile["Y"][n - 1, 0].shape[0]):
+        error_message = "The value of i should be between 1 and " + str(matfile["Y"][n - 1, 0].shape[0]) + ". Here " + \
+                        str(matfile["Y"][n - 1, 0].shape[0]) + " is the number of trajectories in " + filename + \
+                        " corresponding to eigenmanifold n."
+        raise ValueError(error_message)
+
+    # Get the trajectory data and the time data
+    traj = matfile["Y"][n - 1, 0][i - 1][0]
+    time = matfile["Y"][n - 1, 2][i - 1][0]
+
+    return time, traj
 
