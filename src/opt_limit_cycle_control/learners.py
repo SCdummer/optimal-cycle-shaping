@@ -186,14 +186,16 @@ class OptEigManifoldLearner(pl.LightningModule):
             scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=.999)
             return ({"optimizer": optimizer, "lr_scheduler": scheduler, "frequency": 1})
         else:
-            params1 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
-            params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}]#, {'params': self.u0, 'lr': self.lr}]
+            params1 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr},
+                       {'params': self.model.f.T, 'lr': self.lr}]
+            #params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}]#, {'params': self.u0, 'lr': self.lr}]
+            params2 = [{'params': self.u0, 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr}]
             optimizer1 = torch.optim.Adam(params1)
             optimizer2 = torch.optim.Adam(params2)
             scheduler1 = torch.optim.lr_scheduler.ExponentialLR(optimizer1, gamma=.999)
             scheduler2 = torch.optim.lr_scheduler.ExponentialLR(optimizer2, gamma=.999)
-            return ({"optimizer": optimizer1, "lr_scheduler": scheduler1, "frequency": 2},
-                    {"optimizer": optimizer2, "lr_scheduler": scheduler2, "frequency": 10})
+            return ({"optimizer": optimizer1, "lr_scheduler": scheduler1, "frequency": 3},
+                    {"optimizer": optimizer2, "lr_scheduler": scheduler2, "frequency": 3})
 
     def train_dataloader(self):
         return dummy_trainloader()

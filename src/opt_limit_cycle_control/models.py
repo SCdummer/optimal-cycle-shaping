@@ -127,7 +127,7 @@ class ControlledSystemDoublePendulum(nn.Module):
         dq2dt = (p2 * (2 * l2 * l1 * m2 * torch.cos(q2) + l1**2 * (m1 + m2) + l2**2 * m2))/ DET - (l2 * m2 * p1 * (l1 * torch.cos(q2) + l2))/ DET
 
         dp1dt = (-g) * (torch.sin(q1 + q2) * l2 * m2 + torch.sin(q1) * l1 * (m1 + m2)) + u1
-        dp2dt = k_1 * (torch.pi - 2*q2) - l2 * m2 * (g * torch.sin(q1 + q2) - torch.sin(q2) * l1 * dq1dt * (dq1dt + dq2dt)) + u2
+        dp2dt = k1 * (torch.pi - 2*q2) - l2 * m2 * (g * torch.sin(q1 + q2) - torch.sin(q2) * l1 * dq1dt * (dq1dt + dq2dt)) + u2
 
         
 
