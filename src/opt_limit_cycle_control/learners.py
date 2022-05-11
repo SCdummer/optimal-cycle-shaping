@@ -29,7 +29,8 @@ class OptEigManifoldLearner(pl.LightningModule):
         self.optimizer_strategy = opt_strategy
         self.minT = min_period
         self.maxT = max_period
-
+        self.epoch = 0
+        self.count = 0
         assert min_period >= 0, "the minimum period should always be larger or equal to 0"
         assert max_period is None or max_period >= 0, "the maximum period should always be larger or equal to 0"
         if self.times is not None:
@@ -72,8 +73,20 @@ class OptEigManifoldLearner(pl.LightningModule):
         period = period.clamp(self.minT, self.maxT)
         self.model.f.T.data = period
 
+    def beta_scheduler(self, epoch, max_epoch, R=0.5, M=4):
+        tau = ((epoch) % (max_epoch / M)) / (max_epoch / M)
+        if tau <= R:
+            beta = 2 * (epoch % (max_epoch / M)) / (max_epoch / M)
+        else:
+            beta = 1
+        return beta
+
     def _training_step1(self, batch, batch_idx):
         # Solve the ODE forward in time for T seconds
+        if self.count % 7 == 0:
+            self.epoch += 1
+        self.count += 1
+        
         init_cond = torch.cat([self.u0, torch.zeros(1, self.spatial_dim + 1).cuda()], dim=1)
         xTl = self.forward(init_cond)
         xT, l = xTl[:, :-1], xTl[:, -1:]
@@ -82,7 +95,10 @@ class OptEigManifoldLearner(pl.LightningModule):
         periodicity_loss = self.l_period * self.periodicity_loss(init_cond, xT)
         integral_task_loss = self.l_task_loss * torch.abs(self.model.f.T[0]) * torch.mean(l)
         non_integral_task_loss = self.l_task_loss_2 * self.non_integral_task_loss(xT)
-        loss = periodicity_loss + integral_task_loss + non_integral_task_loss
+        beta = self.beta_scheduler(self.epoch, 800)
+        print(beta)
+        print(self.epoch)
+        loss = beta * periodicity_loss + integral_task_loss + non_integral_task_loss
         print('                      ')
         print('                      ')
         print('periodicity loss', periodicity_loss)

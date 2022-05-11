@@ -78,11 +78,11 @@ else:
 
     target = torch.Tensor(traj[indices, 0:2]).cuda()
 
-    # If we use the CloseToPosition loss, use times = None. If we use the CloseToPosition at times loss, specify the
+    # If we use the CloseToPosition loss, use times = None.= None. If we use the CloseToPosition at times loss, specify the
     # times at which we want to pass through the positions.
 
-    #times = torch.Tensor(time[indices, 0]).cuda()
-    times = None
+    times = torch.Tensor(time[indices, 0]).cuda()
+    #times = None
 
     # Create an animation of the chosen eigenmode
     if to_animate_eig_mode:
