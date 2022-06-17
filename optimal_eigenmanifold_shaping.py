@@ -24,7 +24,7 @@ if pendulum:
     v_in = 1
     v_out = 1
     hdim = 256
-    training_epochs = 100
+    training_epochs = 800
     lr = 1e-3
     spatial_dim = 1
     opt_strategy = 1
@@ -54,7 +54,7 @@ if pendulum:
 else:
     v_in = 2
     v_out = 2
-    hdim = 256
+    hdim = 10
     training_epochs = 800
     lr = 1e-3
     spatial_dim = 2

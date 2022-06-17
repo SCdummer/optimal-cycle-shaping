@@ -135,7 +135,7 @@ wandb/
 pend_adjoint/
 
 # figures
-Figures/
+Succesful_pick_and_place_experiment_plots/
 
 *.xml
 *.iml

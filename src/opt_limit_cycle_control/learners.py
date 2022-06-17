@@ -6,27 +6,38 @@ from torchdiffeq import odeint, odeint_adjoint
 
 
 class OptEigManifoldLearner(pl.LightningModule):
-    def __init__(self, model: nn.Module, non_integral_task_loss_func: nn.Module, l_period=1.0, l_task_loss=1.0,
-                 l_task_loss_2=1.0, lr=0.001, sensitivity='autograd', opt_strategy=1.0, spatial_dim=1, min_period=0,
-                 max_period=None, times=None):
+    def __init__(self, model: nn.Module, non_integral_task_loss_func: nn.Module, l_period=1.0, alpha_p=1.0, alpha_s=0.0,
+                 alpha_mv=0.0, l_task_loss=1.0, l_task_loss_2=1.0, lr=0.001, sensitivity='autograd', opt_strategy=1.0,
+                 spatial_dim=1, min_period=0, max_period=None, times=None, u0_init=None, u0_requires_grad=True):
         super().__init__()
         self.model = model
         self.spatial_dim = spatial_dim
-        u0 = 0.0
-        if spatial_dim == 2:
-            u0 = [0.0, 0.0]
-        self.u0 = torch.tensor(u0).view(1, self.spatial_dim).cuda()
+        if u0_init is None:
+            u0 = 0.0
+            if spatial_dim == 2:
+                u0 = [0.0, 0.0]
+            self.u0 = torch.tensor(u0).view(1, self.spatial_dim).cuda()
+        else:
+            if not len(u0_init) == self.spatial_dim:
+                raise ValueError("u0_init should be a list containing spatial_dim values indicating the initial value")
+            else:
+                self.u0 = torch.tensor(u0_init).view(1, self.spatial_dim).cuda()
+
         #self.u0 = torch.randn(1, self.spatial_dim).cuda()
-        self.u0.requires_grad = True
+        self.u0.requires_grad = u0_requires_grad
         self.non_integral_task_loss = non_integral_task_loss_func
         self.times = times
         self.num_times = None if self.times is None else self.times.size(0)
         self.odeint = odeint if sensitivity == 'autograd' else odeint_adjoint
         self.l_period = l_period
+        self.alpha_p = alpha_p
+        self.alpha_s = alpha_s
+        self.alpha_mv = alpha_mv
         self.l_task_loss = l_task_loss
         self.l_task_loss_2 = l_task_loss_2
         self.lr = lr
         self.optimizer_strategy = opt_strategy
+        self.half_period_index = None # will be defined later on in the create_t_list function
         self.minT = min_period
         self.maxT = max_period
         self.epoch = 0
@@ -45,7 +56,12 @@ class OptEigManifoldLearner(pl.LightningModule):
                                                    sorted=True, return_inverse=True)
             return output, inverse_indices[-self.num_times:]
         else:
-            output = torch.linspace(0, 1, num_points).cuda()
+            # output = torch.linspace(0, 1, num_points).cuda()
+            output, half_period_index = torch.unique(torch.cat([torch.linspace(0, 1, num_points).cuda(), torch.tensor(0.5).unsqueeze(0).cuda()]),
+                                                   sorted=True, return_inverse=True)
+            self.half_period_index = half_period_index[-1].item()
+            if hasattr(self.non_integral_task_loss, 'half_period_index'):
+                self.non_integral_task_loss.half_period_index = self.half_period_index
             return output, [0]
 
 
@@ -59,13 +75,38 @@ class OptEigManifoldLearner(pl.LightningModule):
 
         return self.odeint(self.model, x, output.cuda(), method='midpoint').squeeze(1)
 
+    def eig_mode_loss(self, init_cond, xT, indices):
+        if self.alpha_s + self.alpha_p + self.alpha_mv == 0:
+            return 0.0
+        elif self.half_period_index is None:
+            periodicity_loss = self.periodicity_loss(init_cond, xT)
+            avg_variance = self.avg_vec_field_variance(xT)
+            return (1.0 + 1.0 / avg_variance) * periodicity_loss
+        else:
+            periodicity_loss = self.periodicity_loss(init_cond, xT)
+            sym_trajectory_loss = self.sym_trajectory_loss(xT, indices)
+            middle_vel_loss = self.middle_vel_loss(xT)
+            avg_variance = self.avg_vec_field_variance(xT)
+            alpha_sum = self.alpha_p + self.alpha_s + self.alpha_mv
+            eig_loss = (self.alpha_p * periodicity_loss + self.alpha_s * sym_trajectory_loss + self.alpha_mv
+                        * middle_vel_loss) / alpha_sum
+            return (1.0 + 1.0/avg_variance) * eig_loss
+
+    def avg_vec_field_variance(self, xT):
+        vector_field = self.model.f(torch.linspace(0, 1, 100).cuda(), xT)[:, 0:self.spatial_dim].view(-1,
+                                                                                                      self.spatial_dim)
+        return torch.mean(torch.var(vector_field, dim=0))
+
     def periodicity_loss(self, init_cond, xT):
-        vector_field = self.model.f(torch.linspace(0, 1, 100).cuda(), xT)[:, 0:self.spatial_dim].view(-1, self.spatial_dim)
-        avg_variance = torch.mean(torch.var(vector_field, dim=0))
-        #max_diff = torch.max(torch.norm(vector_field, dim=1) ** 2)
-        periodicity_loss = torch.norm(init_cond.squeeze(0)[0:2*self.spatial_dim] - xT[-1, :].cuda()) ** 2
-        #return periodicity_loss * (1 + 1/max_diff)
-        return periodicity_loss * (1 + 1/avg_variance)
+        return torch.norm(init_cond.squeeze(0)[0:2*self.spatial_dim] - xT[-1, :].cuda()) ** 2
+
+    def sym_trajectory_loss(self, xT, indices):
+        sym_indices = (xT.shape[0] - 1) - indices
+        return (torch.norm(xT[indices, 0:self.spatial_dim] - xT[sym_indices, 0:self.spatial_dim]) ** 2 +
+                torch.norm(xT[indices, self.spatial_dim:] + xT[sym_indices, self.spatial_dim:]) ** 2 ) / indices.numel()
+
+    def middle_vel_loss(self, xT):
+        return torch.norm(xT[self.half_period_index, self.spatial_dim:])**2
 
     def on_train_batch_start(self, batch, batch_idx, unused=0):
         period = self.model.f.T.data
@@ -81,6 +122,22 @@ class OptEigManifoldLearner(pl.LightningModule):
             beta = 1
         return beta
 
+    # def on_after_backward(self):
+    #     params_f = self.model.f.state_dict(keep_vars=True)
+    #     if self.u0.requires_grad:
+    #         init_cond = self.u0
+    #         grad_norm = torch.norm(init_cond.grad) ** 2
+    #     else:
+    #         grad_norm = 0.0
+    #
+    #     for k, v in params_f.items():
+    #         if v.grad is not None:
+    #             grad_norm += torch.norm(v.grad) ** 2
+    #     grad_norm = torch.sqrt(grad_norm)
+    #     print('norm of the gradient:', grad_norm)
+    #     with torch.no_grad():
+    #         self.l_period = lagrange_multiplier_changer(self.l_period, 1.1, grad_norm, 0.5, 1.0)
+
     def _training_step1(self, batch, batch_idx):
         # Solve the ODE forward in time for T seconds
         if self.count % 7 == 0:
@@ -92,12 +149,17 @@ class OptEigManifoldLearner(pl.LightningModule):
         xT, l = xTl[:, :-1], xTl[:, -1:]
 
         # Compute loss
-        periodicity_loss = self.l_period * self.periodicity_loss(init_cond, xT)
+        num_sym_check_instances = 25
+        if self.half_period_index is not None:
+            indices = torch.randperm(self.half_period_index-1)[:num_sym_check_instances]
+        else:
+            indices = None
+        periodicity_loss = self.l_period * self.eig_mode_loss(init_cond, xT, indices)
         integral_task_loss = self.l_task_loss * torch.abs(self.model.f.T[0]) * torch.mean(l)
         non_integral_task_loss = self.l_task_loss_2 * self.non_integral_task_loss(xT)
         beta = self.beta_scheduler(self.epoch, 800)
-        print(beta)
-        print(self.epoch)
+        print('beta: ', beta)
+        print('epoch: ', self.epoch)
         loss = beta * periodicity_loss + integral_task_loss + non_integral_task_loss
         print('                      ')
         print('                      ')
@@ -162,7 +224,9 @@ class OptEigManifoldLearner(pl.LightningModule):
 
         else:
             loss_type = "periodicity loss"
-            periodicity_loss = self.l_period * self.periodicity_loss(init_cond, xT)
+            num_sym_check_instances = 5
+            indices = torch.randperm(xT.shape[0] / 2)[:num_sym_check_instances]
+            periodicity_loss = self.l_period * self.eig_mode_loss(init_cond, xT, indices)
             loss = periodicity_loss
             print('                      ')
             print('                      ')
@@ -196,16 +260,28 @@ class OptEigManifoldLearner(pl.LightningModule):
 
     def configure_optimizers(self):
         if self.optimizer_strategy == 1.0:
-            params = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr},
-                      {'params': self.u0, 'lr': self.lr}]
+            if self.u0.requires_grad:
+                params = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr},
+                          {'params': self.u0, 'lr': self.lr}]
+            else:
+                params = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr}]
             optimizer = torch.optim.Adam(params)
             scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=.999)
             return ({"optimizer": optimizer, "lr_scheduler": scheduler, "frequency": 1})
         else:
-            params1 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr},
-                       {'params': self.model.f.T, 'lr': self.lr}]
-            #params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}]#, {'params': self.u0, 'lr': self.lr}]
-            params2 = [{'params': self.u0, 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr}]
+            if self.u0.requires_grad:
+                params1 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr},
+                           {'params': self.model.f.T, 'lr': self.lr}]
+                params2 = [{'params': self.u0, 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr}]
+                #params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
+                # params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr},
+                #            {'params': self.u0, 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr}]
+            else:
+                params1 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr}]
+                # params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}]#, {'params': self.u0, 'lr': self.lr}]
+                # params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr},
+                #           {'params': self.model.f.T, 'lr': self.lr}]
+                params2 = [{'params': self.model.f.T, 'lr': self.lr}]
             optimizer1 = torch.optim.Adam(params1)
             optimizer2 = torch.optim.Adam(params2)
             scheduler1 = torch.optim.lr_scheduler.ExponentialLR(optimizer1, gamma=.999)
@@ -265,5 +341,41 @@ class CloseToPositionsAtTime(nn.Module):
             return torch.sum(torch.square(xt[self.indices, 0].unsqueeze(1) - self.dest))
         else:
             return torch.sum(torch.sum(torch.square(xt[self.indices, 0:2] - self.dest), dim=1))
+
+class CloseToPositionAtHalfPeriod(nn.Module):
+    # Given a time series as input, this cost function measures how close we are to certain destinations at specific
+    # pre-specified times
+    def __init__(self, dest):
+        super().__init__()
+        self.dest = dest.reshape(-1, 1).cuda()
+        self.half_period_index = None
+
+    def forward(self, xt):
+        # xt[:, 0] for pendulum
+        if xt.shape[1] == 2:
+            return torch.sum(torch.square(xt[self.half_period_index, 0].unsqueeze(1) - self.dest)) + \
+                   torch.sum(torch.square(xt[self.half_period_index, 1].unsqueeze(1)))
+        else:
+            return torch.sum(torch.square(xt[self.half_period_index, 0:2].unsqueeze(1) - self.dest)) + \
+                   torch.sum(torch.square(xt[self.half_period_index, 2:4]))
+            # return torch.exp(torch.sum(torch.square(xt[self.half_period_index, 0:2].unsqueeze(1) - self.dest))) * \
+            #        (1 + torch.sum(torch.square(xt[self.half_period_index, 2:4])))
+
+            # pos_dist = torch.sum(torch.square(xt[self.half_period_index, 0:2].unsqueeze(1) - self.dest))
+            # vel_zero_dist = torch.sum(torch.square(xt[self.half_period_index, 2:4]))
+            # epsilon = 0.025
+            # scaling = 10 ** (-4)
+            #
+            # return pos_dist + torch.sigmoid(-(torch.square(pos_dist) - epsilon) / scaling) * vel_zero_dist
+
+            # return torch.exp(torch.sum(torch.square(xt[self.half_period_index, 0:2].unsqueeze(1) - self.dest))) * \
+            #        (1 + torch.sum(torch.square(xt[self.half_period_index, 2:4])))
+
+
+# def lagrange_multiplier_changer(lam, mult_const, weight_grad_norm, weight_grad_bound, max_val):
+#     if weight_grad_norm <= weight_grad_bound:
+#         return min(lam*mult_const, max_val)
+#     else:
+#         return lam
 
 
