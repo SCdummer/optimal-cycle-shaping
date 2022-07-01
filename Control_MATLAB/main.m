@@ -60,6 +60,12 @@ opts = odeset('RelTol',Err_min*1e-3,'AbsTol',Err_min*1e-3);                 % To
 u0 = rand(4,1); %[q_t(0);p_t(0)]+0.1;%                                      % Initial state
 ufinal = ode45(@(t,u)EoM_Control(u,T,F),[0,10],u0,opts);                    % Output of simulation
 
+%% 4.1 Cycle Multipliers (Smaller than 1 means locally attracting orbit)
+u0 = [q_t(T/4);p_t(T/4)];
+psi_T = @(u0) deval(ode45(@(t,u)EoM_Control(u,T,F),[0,T],u0,opts),T);
+Jac = numJ(psi_T,u0,1e-2);
+CycleMultipliers = eig(Jac);
+
 %% 5. Relevant plots 
 % Plot Distance function:
 nX = 100;
