@@ -378,4 +378,36 @@ class CloseToPositionAtHalfPeriod(nn.Module):
 #     else:
 #         return lam
 
+class CloseToActualPositionAtHalfPeriod(nn.Module):
+    # Given a time series as input, this cost function measures how close we are to certain destinations at specific
+    # pre-specified times
+    def __init__(self, dest_angle, l1, l2):
+        super().__init__()
+        self.dest_angle = dest_angle.reshape(-1, 1).cuda()
+        self.l1 = l1
+        self.l2 = l2
+        self.half_period_index = None
 
+        # Calculating self.dest
+        # compute the desired double pendulum position
+        x_pos_first_joint = self.l1 * torch.sin(self.dest_angle[0])
+        y_pos_first_joint = -self.l1 * torch.cos(self.dest_angle[0])
+        x2 = x_pos_first_joint + self.l2 * torch.sin(self.dest_angle[1] + self.dest_angle[0])
+        y2 = y_pos_first_joint - self.l2 * torch.cos(self.dest_angle[1] + self.dest_angle[0])
+
+        self.dest = torch.tensor([x2, y2]).reshape(-1, 1).cuda()
+
+    def forward(self, xt):
+        # xt[:, 0] for pendulum
+        if xt.shape[1] == 2:
+            raise NotImplementedError
+        else:
+
+            # compute double pendulum position
+            x_pos_first_joint = self.l1 * torch.sin(xt[self.half_period_index, 0])
+            y_pos_first_joint = -self.l1 * torch.cos(xt[self.half_period_index, 0])
+            x2 = x_pos_first_joint + self.l2 * torch.sin(xt[self.half_period_index, 1] + xt[self.half_period_index, 0])
+            y2 = y_pos_first_joint - self.l2 * torch.cos(xt[self.half_period_index, 1] + xt[self.half_period_index, 0])
+
+            return (x2 - self.dest[0]) ** 2 + (y2 - self.dest[1]) ** 2 + \
+                    torch.sum(torch.square(xt[self.half_period_index, 2:4]))/10
