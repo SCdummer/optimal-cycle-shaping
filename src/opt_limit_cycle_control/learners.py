@@ -196,7 +196,7 @@ class OptEigManifoldLearner(pl.LightningModule):
         # Compute loss
         if optimizer_idx == 0:
             loss_type = "task loss"
-            integral_task_loss = self.l_task_loss * torch.abs(self.model.f.T[0]) * torch.mean(l)
+            integral_task_loss = self.l_task_loss * torch.abs(self.model.f.T[0]) * l
             non_integral_task_loss = self.l_task_loss_2 * self.non_integral_task_loss(xT)
             loss = integral_task_loss + non_integral_task_loss
             print('                      ')
@@ -306,7 +306,7 @@ class ControlEffort(nn.Module):
             else:
                 q = x[:, :2].requires_grad_(True)
             u = self.f._energy_shaping(q)
-        return torch.abs(torch.sum(u, dim=1, keepdim=False))
+        return torch.sum(torch.abs(u), dim=1, keepdim=False) #L1-norm
 
 
 # Define the non-integral cost function
