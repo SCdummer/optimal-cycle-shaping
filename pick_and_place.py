@@ -26,7 +26,7 @@ print(device)
 v_in = 2
 v_out = 2
 hdim = 100
-training_epochs = 200
+training_epochs = 500
 lr = 1e-3
 spatial_dim = 2
 opt_strategy = 1
@@ -41,7 +41,7 @@ l_task_2_k = 10
 l1, l2 = 1.0, 1.0
 
 # angular targets for q1 and q2
-target = torch.tensor([0.5, 0.5]).reshape(2, 1).cuda()
+target = torch.tensor([1.5, 1.5]).reshape(2, 1).to(device) # target 1 [0.5, 0.5]
 use_target_angles = False
 
 # vector field parametrized by a NN
@@ -50,7 +50,7 @@ V = nn.Sequential(
     nn.Tanh(),
     nn.Linear(hdim, hdim),
     nn.Tanh(),
-    nn.Linear(hdim, v_out))
+    nn.Linear(hdim, 1))
     #,
     #nn.Tanh())
 # discretization_thetas = torch.linspace(-math.pi, math.pi, 50)[0:-1]
@@ -59,7 +59,7 @@ V = nn.Sequential(
 # kernel = KernelFunc(ReluKernel(scaling), kernel_locations, is_torus=True)
 # V = KernelRegression(kernel)
 
-def compute_opt_eigenmode(l_task_k):
+def compute_opt_eigenmode(l_task_k, training_epochs):
     f = ControlledSystemDoublePendulum(V).to(device)
     aug_f = AugmentedDynamicsDoublePendulum(f, ControlEffort(f))
 
@@ -68,12 +68,12 @@ def compute_opt_eigenmode(l_task_k):
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositionAtHalfPeriod(target),
                                     l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
                                     l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
-                                    spatial_dim=spatial_dim, lr=lr, u0_init=[-0.5, -0.5], u0_requires_grad=False)
+                                    spatial_dim=spatial_dim, lr=lr, u0_init=[-0.0, -0.0], u0_requires_grad=False) #u0_init = [-0.5, -0.5]
     else:
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToActualPositionAtHalfPeriod(target, l1, l2),
                                     l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
                                     l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
-                                    spatial_dim=spatial_dim, lr=lr, u0_init=[-0.5, -0.5], u0_requires_grad=False)
+                                    spatial_dim=spatial_dim, lr=lr, u0_init=[0.0, 0.0], u0_requires_grad=False)
 
     logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
 
@@ -90,19 +90,32 @@ def compute_opt_eigenmode(l_task_k):
 
     # Plotting the final results.
     num_points = 1000
+    num_data = 200
     angles = torch.cat([torch.linspace(-np.pi, np.pi, num_points).view(-1, 1), torch.linspace(-np.pi, np.pi, num_points).view(-1, 1)], dim=1)
+
+    q1, q2 = torch.tensor(np.meshgrid(np.linspace(-np.pi, np.pi, num_data).astype('float32'), np.linspace(-np.pi, np.pi, num_data).astype('float32')))
+
+    q1 = q1.reshape((num_data*num_data, 1))
+    q2 = q2.reshape((num_data*num_data, 1))
+    q = torch.cat([q1, q2], dim=1)
+
     with torch.no_grad():
         xT = odeint(learn.model.f.cuda(), torch.cat([learn.u0, torch.zeros(learn.u0.size()).cuda()], dim=1).cuda(),
                     torch.linspace(0, 1, num_points).cuda(), method='midpoint').squeeze(1).cpu().detach().numpy()
 
-    vu = learn.model.f(torch.linspace(0, 1, num_points).cuda(), angles.detach().cuda(), V_only=True).cuda().detach().cpu().numpy()
+    vu = learn.model.f(torch.linspace(0, 1, num_points).cuda(), q.detach().cuda(), V_only=True).cuda().detach().cpu().numpy()
 
-    plot_trajectories(xT=xT, target=target.reshape(1, -1).cpu(), V=vu[:, 0:v_in].reshape(num_points, v_in), angles=angles.numpy().reshape(num_points, v_in),
-                    u=vu[:, :v_in].reshape(num_points, v_in), l1=1, l2=1, pendulum=False, plot3D=False, c_eff_penalty=l_task_k)
+    vu2 = learn.model.f(torch.linspace(0, 1, num_points).cuda(), angles.detach().cuda(),
+                       V_only=True).cuda().detach().cpu().numpy()
+    T = learn.model.f.T[0].item()
+    plot_trajectories(xT=xT, target=target.reshape(1, -1).cpu(), V=vu[:, 0].reshape(num_data*num_data, 1),
+                      angles=angles.numpy().reshape(num_points, v_in), u=vu[:, -v_in:].reshape(num_data*num_data, v_in),
+                      l1=1, l2=1, pendulum=False, plot3D=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(), q2=q2.cpu().numpy(), u2=vu2[:, -v_in:].reshape(num_points, v_in))
     print('Job is done!')
 
 if __name__ == "__main__":
 
-    task_loss_coeff = [0.0, 0.025, 0.05, 0.075, 0.1, 1.0]
+    task_loss_coeff = [0.0, 0.001, 0.005, 0.01]#[0.0, 0.025, 0.05, 0.075, 0.1, 1.0]
+    training_epochs = [300, 500, 500, 500]
     for i in range(len(task_loss_coeff)):
-        compute_opt_eigenmode(task_loss_coeff[i])
+        compute_opt_eigenmode(task_loss_coeff[i], training_epochs[i])

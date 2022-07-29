@@ -92,6 +92,9 @@ class OptEigManifoldLearner(pl.LightningModule):
                         * middle_vel_loss) / alpha_sum
             return (1.0 + 1.0/avg_variance) * eig_loss
 
+    def eigenmode_loss(self, xT):
+        return torch.sum(torch.square(xT[self.half_period_index, 2:4]))
+
     def avg_vec_field_variance(self, xT):
         vector_field = self.model.f(torch.linspace(0, 1, 100).cuda(), xT)[:, 0:self.spatial_dim].view(-1,
                                                                                                       self.spatial_dim)
@@ -122,22 +125,6 @@ class OptEigManifoldLearner(pl.LightningModule):
             beta = 1
         return beta
 
-    # def on_after_backward(self):
-    #     params_f = self.model.f.state_dict(keep_vars=True)
-    #     if self.u0.requires_grad:
-    #         init_cond = self.u0
-    #         grad_norm = torch.norm(init_cond.grad) ** 2
-    #     else:
-    #         grad_norm = 0.0
-    #
-    #     for k, v in params_f.items():
-    #         if v.grad is not None:
-    #             grad_norm += torch.norm(v.grad) ** 2
-    #     grad_norm = torch.sqrt(grad_norm)
-    #     print('norm of the gradient:', grad_norm)
-    #     with torch.no_grad():
-    #         self.l_period = lagrange_multiplier_changer(self.l_period, 1.1, grad_norm, 0.5, 1.0)
-
     def _training_step1(self, batch, batch_idx):
         # Solve the ODE forward in time for T seconds
         if self.count % 7 == 0:
@@ -154,16 +141,17 @@ class OptEigManifoldLearner(pl.LightningModule):
             indices = torch.randperm(self.half_period_index-1)[:num_sym_check_instances]
         else:
             indices = None
-        periodicity_loss = self.l_period * self.eig_mode_loss(init_cond, xT, indices)
-        integral_task_loss = self.l_task_loss * torch.abs(self.model.f.T[0]) * torch.mean(l)
+        periodicity_loss = self.eigenmode_loss(xT) #self.l_period * self.eig_mode_loss(init_cond, xT, indices)
+        integral_task_loss = self.l_task_loss * l[-1]#torch.mean(l)
         non_integral_task_loss = self.l_task_loss_2 * self.non_integral_task_loss(xT)
-        beta = self.beta_scheduler(self.epoch, 200)
+        beta = 1#self.beta_scheduler(self.epoch, 200)
         print('beta: ', beta)
         print('epoch: ', self.epoch)
+        print('periodicity loss', periodicity_loss)
         loss = beta * periodicity_loss + integral_task_loss + non_integral_task_loss
         print('                      ')
         print('                      ')
-        print('periodicity loss', periodicity_loss)
+        print('periodicity loss multiplied by beta', periodicity_loss)
         print('task loss', non_integral_task_loss)
         print('integral loss', integral_task_loss)
         print('                      ')
@@ -187,76 +175,12 @@ class OptEigManifoldLearner(pl.LightningModule):
         self.model.nfe = 0
         return {'loss': loss}
 
-    def _training_step2(self, batch, batch_idx, optimizer_idx):
-        # Solve the ODE forward in time for T seconds
-        init_cond = torch.cat([self.u0, torch.zeros(1, self.spatial_dim + 1).cuda()], dim=1)
-        xTl = self.forward(init_cond)
-        xT, l = xTl[:, :-1], xTl[:, -1:]
-
-        # Compute loss
-        if optimizer_idx == 0:
-            loss_type = "task loss"
-            integral_task_loss = self.l_task_loss * torch.abs(self.model.f.T[0]) * l
-            non_integral_task_loss = self.l_task_loss_2 * self.non_integral_task_loss(xT)
-            loss = integral_task_loss + non_integral_task_loss
-            print('                      ')
-            print('                      ')
-            print('task loss', non_integral_task_loss)
-            print('integral loss', integral_task_loss)
-            print('                      ')
-
-            # log training data
-            self.logger.experiment.log(
-                {
-                    'periodicity loss': None,
-                    'integral task loss': integral_task_loss,
-                    'non-integral task loss': non_integral_task_loss,
-                    'train loss': loss,
-                    'nfe': self.model.nfe,
-                    'q_max': xT[:, 0].max(),
-                    'p_max': xT[:, 1].max(),
-                    'q_min': xT[:, 0].min(),
-                    'p_min': xT[:, 1].min(),
-                    'xT_mean': xT.mean(),
-                    'xT_std': xT.std()
-                }
-            )
-
-        else:
-            loss_type = "periodicity loss"
-            num_sym_check_instances = 5
-            indices = torch.randperm(xT.shape[0] / 2)[:num_sym_check_instances]
-            periodicity_loss = self.l_period * self.eig_mode_loss(init_cond, xT, indices)
-            loss = periodicity_loss
-            print('                      ')
-            print('                      ')
-            print('periodicity loss', periodicity_loss)
-            print('                      ')
-            # log training data
-            self.logger.experiment.log(
-                {
-                    'periodicity loss': periodicity_loss,
-                    'integral task loss': None,
-                    'non-integral task loss': None,
-                    'train loss': loss,
-                    'nfe': self.model.nfe,
-                    'q_max': xT[:, 0].max(),
-                    'p_max': xT[:, 1].max(),
-                    'q_min': xT[:, 0].min(),
-                    'p_min': xT[:, 1].min(),
-                    'xT_mean': xT.mean(),
-                    'xT_std': xT.std()
-                }
-            )
-
-        self.model.nfe = 0
-        return {'loss': loss}
-
     def training_step(self, batch, batch_idx, optimizer_idx=1):
         if self.optimizer_strategy == 1.0:
             return self._training_step1(batch, batch_idx)
         else:
-            return self._training_step2(batch, batch_idx, optimizer_idx)
+            print("Not Implemented")
+            pass
 
     def configure_optimizers(self):
         if self.optimizer_strategy == 1.0:
@@ -269,25 +193,8 @@ class OptEigManifoldLearner(pl.LightningModule):
             scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=.999)
             return ({"optimizer": optimizer, "lr_scheduler": scheduler, "frequency": 1})
         else:
-            if self.u0.requires_grad:
-                params1 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr},
-                           {'params': self.model.f.T, 'lr': self.lr}]
-                params2 = [{'params': self.u0, 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr}]
-                #params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.u0, 'lr': self.lr}]
-                # params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr},
-                #            {'params': self.u0, 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr}]
-            else:
-                params1 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}, {'params': self.model.f.T, 'lr': self.lr}]
-                # params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr}]#, {'params': self.u0, 'lr': self.lr}]
-                # params2 = [{'params': self.model.f.V.parameters(), 'lr': self.lr},
-                #           {'params': self.model.f.T, 'lr': self.lr}]
-                params2 = [{'params': self.model.f.T, 'lr': self.lr}]
-            optimizer1 = torch.optim.Adam(params1)
-            optimizer2 = torch.optim.Adam(params2)
-            scheduler1 = torch.optim.lr_scheduler.ExponentialLR(optimizer1, gamma=.999)
-            scheduler2 = torch.optim.lr_scheduler.ExponentialLR(optimizer2, gamma=.999)
-            return ({"optimizer": optimizer1, "lr_scheduler": scheduler1, "frequency": 3},
-                    {"optimizer": optimizer2, "lr_scheduler": scheduler2, "frequency": 3})
+            print("Not Implemented")
+            pass
 
     def train_dataloader(self):
         return dummy_trainloader()
@@ -306,8 +213,43 @@ class ControlEffort(nn.Module):
             else:
                 q = x[:, :2].requires_grad_(True)
             u = self.f._energy_shaping(q)
-        return torch.sum(torch.abs(u), dim=1, keepdim=False) #L1-norm
 
+        #return torch.sum(torch.abs(u), dim=1, keepdim=False) #L1-norm
+        return torch.sum(torch.square(u), dim=1, keepdim=False)  # L2-norm
+
+
+class CloseToActualPositionAtHalfPeriod(nn.Module):
+    # Given a time series as input, this cost function measures how close we are to certain destinations at specific
+    # pre-specified times
+    def __init__(self, dest_angle, l1, l2):
+        super().__init__()
+        self.dest_angle = dest_angle.reshape(-1, 1).cuda()
+        self.l1 = l1
+        self.l2 = l2
+        self.half_period_index = None
+
+        # Calculating self.dest
+        # compute the desired double pendulum position
+        x_pos_first_joint = self.l1 * torch.sin(self.dest_angle[0])
+        y_pos_first_joint = -self.l1 * torch.cos(self.dest_angle[0])
+        x2 = x_pos_first_joint + self.l2 * torch.sin(self.dest_angle[1] + self.dest_angle[0])
+        y2 = y_pos_first_joint - self.l2 * torch.cos(self.dest_angle[1] + self.dest_angle[0])
+
+        self.dest = torch.tensor([x2, y2]).reshape(-1, 1).cuda()
+
+    def forward(self, xt):
+        # xt[:, 0] for pendulum
+        if xt.shape[1] == 2:
+            raise NotImplementedError
+        else:
+
+            # compute double pendulum position
+            x_pos_first_joint = self.l1 * torch.sin(xt[self.half_period_index, 0])
+            y_pos_first_joint = -self.l1 * torch.cos(xt[self.half_period_index, 0])
+            x2 = x_pos_first_joint + self.l2 * torch.sin(xt[self.half_period_index, 1] + xt[self.half_period_index, 0])
+            y2 = y_pos_first_joint - self.l2 * torch.cos(xt[self.half_period_index, 1] + xt[self.half_period_index, 0])
+
+            return (x2 - self.dest[0]) ** 2 + (y2 - self.dest[1]) ** 2
 
 # Define the non-integral cost function
 class CloseToPositions(nn.Module):
@@ -378,36 +320,4 @@ class CloseToPositionAtHalfPeriod(nn.Module):
 #     else:
 #         return lam
 
-class CloseToActualPositionAtHalfPeriod(nn.Module):
-    # Given a time series as input, this cost function measures how close we are to certain destinations at specific
-    # pre-specified times
-    def __init__(self, dest_angle, l1, l2):
-        super().__init__()
-        self.dest_angle = dest_angle.reshape(-1, 1).cuda()
-        self.l1 = l1
-        self.l2 = l2
-        self.half_period_index = None
 
-        # Calculating self.dest
-        # compute the desired double pendulum position
-        x_pos_first_joint = self.l1 * torch.sin(self.dest_angle[0])
-        y_pos_first_joint = -self.l1 * torch.cos(self.dest_angle[0])
-        x2 = x_pos_first_joint + self.l2 * torch.sin(self.dest_angle[1] + self.dest_angle[0])
-        y2 = y_pos_first_joint - self.l2 * torch.cos(self.dest_angle[1] + self.dest_angle[0])
-
-        self.dest = torch.tensor([x2, y2]).reshape(-1, 1).cuda()
-
-    def forward(self, xt):
-        # xt[:, 0] for pendulum
-        if xt.shape[1] == 2:
-            raise NotImplementedError
-        else:
-
-            # compute double pendulum position
-            x_pos_first_joint = self.l1 * torch.sin(xt[self.half_period_index, 0])
-            y_pos_first_joint = -self.l1 * torch.cos(xt[self.half_period_index, 0])
-            x2 = x_pos_first_joint + self.l2 * torch.sin(xt[self.half_period_index, 1] + xt[self.half_period_index, 0])
-            y2 = y_pos_first_joint - self.l2 * torch.cos(xt[self.half_period_index, 1] + xt[self.half_period_index, 0])
-
-            return (x2 - self.dest[0]) ** 2 + (y2 - self.dest[1]) ** 2 + \
-                    torch.sum(torch.square(xt[self.half_period_index, 2:4]))/10
