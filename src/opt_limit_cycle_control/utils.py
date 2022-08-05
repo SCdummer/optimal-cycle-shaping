@@ -5,6 +5,7 @@ from pytorch_lightning import LightningDataModule
 import numpy as np
 import os.path
 import scipy.io
+from scipy.interpolate import interp1d
 
 
 class DummyDataModule(LightningDataModule):
@@ -192,3 +193,9 @@ def load_eig_mode_double_pendulum(n, k, i):
 
     return time, traj
 
+def interp_torch(x,y, device, kind='linear',axis=-1,copy=True,bounds_error=None,fill_value=np.nan,assume_sorted=False):
+    X = x.detach().cpu().numpy()
+    Y = y.detach().cpu().numpy()
+    fnp = interp1d(X,np.transpose(Y),kind=kind,axis=axis,copy=copy,bounds_error=bounds_error,fill_value=fill_value,assume_sorted=assume_sorted)
+    f = lambda x: torch.tensor(fnp(x.detach().cpu().numpy())).to(device).float().squeeze()
+    return f
