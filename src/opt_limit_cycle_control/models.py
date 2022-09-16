@@ -1,5 +1,8 @@
 import torch; import torch.nn as nn
 from torch.autograd import grad as grad
+import numpy as np
+from src.opt_limit_cycle_control.utils import numJ,cuberoot
+
 
 # parameters pendulum
 m, k, l, qr, b, g = 1., 0.5, 1, 0, 0.01, 9.81
@@ -270,24 +273,45 @@ class StabilizedSystemDoublePendulum(nn.Module):
         return F
     
     def _q_t(self,t):
-        return self.x_t(t)[:2]
+        return self.x_t(t).squeeze()[:2]
     
     def _p_t(self,t):
-        return self.x_t(t)[2:]
+        return self.x_t(t).squeeze()[2:]
     
-    def _t_min_d_q(self,q):
+    def _t_min_d_q(self,qc):
         len_xnum = torch.tensor(self.x_num).size()[0]
-        i = torch.argmin(torch.norm(torch.tensor(self.x_num[:np.int(np.floor(len_xnum/2)),:2]).to(q)-q,dim=1))
+        i = torch.argmin(torch.norm(torch.tensor(self.x_num[:np.int(np.floor(len_xnum/2)),:2]).to(qc)-qc,dim=1))
         T_rough = self.T*i/torch.tensor(self.x_num[...,:2]).size()[0]
-        return T_rough
+        Err_min = 1e-4
+        q = self._q_t(T_rough);
+        dq = numJ(self._q_t,T_rough,Err_min).squeeze();
+        ddq = numJ(lambda x: numJ(self._q_t,x,Err_min).squeeze(), T_rough, Err_min).squeeze();
+        p = torch.cat((2*torch.mul(ddq,ddq).unsqueeze(-1), 
+                       3*torch.mul(ddq,dq).unsqueeze(-1), 
+                       (2*torch.mul(ddq,(q-qc.squeeze()))+torch.mul(dq,dq)).unsqueeze(-1),
+                       torch.mul(dq,(q-qc.squeeze())).unsqueeze(-1)),-1)
+        p = p[0,:]+p[1,:];
+        r = cuberoot(p) # used to return all roots in matlab
+        dm = torch.norm(q-qc,dim=1);
+        dt = torch.zeros(1).to(T_rough)
+        #for i in range(1): # used to check all roots, best end-point of interval if none are better
+        qm = self._q_t(T_rough+r);
+        dm_new = torch.norm(qm-qc,dim=1);
+        if dm_new[0] < dm[0]:
+            dm = dm_new;
+            dt = r;
+            
+        T_fine = T_rough+dt;
+
+        return T_fine
     
     
     def _set_control_parameters(self, a_E,a_M,x_fun,x_num):
         self.a_E = a_E
         self.a_M = a_M
         x0 = x_fun(self.T*0)
-        q0 = x0[:2].unsqueeze(0)
-        p0 = x0[2:].unsqueeze(0)
+        q0 = x0.squeeze()[:2].unsqueeze(0)
+        p0 = x0.squeeze()[2:].unsqueeze(0)
         self.E_des = self._energy(q0,p0)
         self.x_t = x_fun
         self.x_num = x_num
@@ -309,4 +333,3 @@ class StabilizedSystemDoublePendulum(nn.Module):
         iM_22 = (2*torch.cos(q2)*l1*l2*m2+l2**2*m2 +l1**2*(m1+m2))/(l1**2*l2**2*m2)/DEN
         
         return torch.tensor(((iM_11,iM_12),(iM_12,iM_22))).to(q)
-
