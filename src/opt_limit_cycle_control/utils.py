@@ -6,6 +6,7 @@ import numpy as np
 import os.path
 import scipy.io
 from scipy.interpolate import interp1d
+from src.opt_limit_cycle_control.torch_cubic_spline_interp import interp_func
 
 
 class DummyDataModule(LightningDataModule):
@@ -193,9 +194,48 @@ def load_eig_mode_double_pendulum(n, k, i):
 
     return time, traj
 
-def interp_torch(x,y, device, kind='linear',axis=-1,copy=True,bounds_error=None,fill_value=np.nan,assume_sorted=False):
+def interp_via_scipy(x,y, device, kind='linear',axis=-1,copy=True,bounds_error=None,fill_value=np.nan,assume_sorted=False):
     X = x.detach().cpu().numpy()
     Y = y.detach().cpu().numpy()
     fnp = interp1d(X,np.transpose(Y),kind=kind,axis=axis,copy=copy,bounds_error=bounds_error,fill_value=fill_value,assume_sorted=assume_sorted)
     f = lambda x: torch.tensor(fnp(x.detach().cpu().numpy())).to(device).float().squeeze()
     return f
+
+def interp_torch(x,y):
+    return interp_func(x,y)
+
+def numJ(f,x,dx):
+    "Numerical Jacobian Matrix using center difference"
+    nx, nf = x.size()[0], f(x).size()[0]
+    I, dfdx = torch.eye(nx).to(x), torch.zeros((nf,nx)).to(x)
+    for i in range(nx):
+        dfdx[:,i] = (f(x+dx*I[:,i]) - f(x-dx*I[:,i]))/(2*dx)
+    return dfdx
+
+def find_orbit(f,x,dx,n=5):
+    # try n newton iterations to find fixed point x_ = f(x_)
+    x_ = x
+    for i in range(n):
+        df_ = f(x_)-x_
+        dfdx = numJ(f,x,dx)
+        x_ = x - torch.inv(dfdx)@df_
+    df_, df = f(x_)-x_, f(x)-x
+    choice = torch.where(torch.norm(df_)-torch.norm(df)<0,1,0)
+    return choice*x_ + torch.abs((choice-1))*x
+
+def cuberoot(coeff): 
+    # Only returns one of the real solutions
+    # if a =/= 0, p and q are real and 4p^3+27q^2 > 0, then there is a real root 
+    a,b,c,d = coeff[0],coeff[1],coeff[2],coeff[3]
+    if (a > 0):
+        p = (3*a*c-b**2)/(3*a**2)
+        q = (2*b**3-9*a*b*c + 27*a**2*d)/(27*a**3)
+        m = torch.sqrt((q**2)/4+(p**3)/27)
+        r = torch.pow(-q/2+m,1/3)+torch.pow(-q/2-m,1/3)
+    elif(b>0):
+        p = c/b
+        q = d/b
+        r = -p/2 + torch.sqrt(p**2/4-q)
+    else:
+        r = -d/c;
+    return r
