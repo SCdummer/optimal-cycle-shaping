@@ -19,6 +19,7 @@ from torchdiffeq import odeint
 import numpy as np
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 print(device)
 
 ### Set-up double pendulum for control
@@ -48,12 +49,12 @@ if not pendulum:
     step_size = int(np.floor(num_times/(num_targets + 1)))
     indices = range(step_size, num_times-step_size, step_size)
 
-    target = torch.Tensor(traj[indices, 0:2]).cuda()
+    target = torch.Tensor(traj[indices, 0:2]).to(device)
 
     # If we use the CloseToPosition loss, use times = None.= None. If we use the CloseToPosition at times loss, specify the
     # times at which we want to pass through the positions.
 
-    times = torch.Tensor(time[indices, 0]).cuda()
+    times = torch.Tensor(time[indices, 0]).to(device)
     #times = None
 
     # Create an animation of the chosen eigenmode
@@ -64,6 +65,10 @@ if not pendulum:
 
     # vector field parametrized by a NN
     (V,u0,T) =torch.load('V_u_T_DoublePendulum_02_08_22.pt')
+    V = V.to(device)
+    u0 = u0.to(device)
+    T = T.to(device)
+    
     a_M = torch.tensor(0)
     a_E = torch.tensor(0)
     x_t = lambda t: torch.tensor((0,0,0,0)).float().to(device)
@@ -83,7 +88,7 @@ else:
                               l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy, spatial_dim=spatial_dim, lr=lr,
                               times=times, min_period=max(times))
 learn.u0 = u0
-learn.model.f.T = T
+learn.model.f.T = torch.nn.Parameter(T)
 
 
 # Plotting the final results.
@@ -94,20 +99,23 @@ else:
     angles = torch.cat([torch.linspace(-np.pi, np.pi, num_points).view(-1, 1), torch.linspace(-np.pi, np.pi, num_points).view(-1, 1)], dim=1)
 
 with torch.no_grad():
-    xT = odeint(learn.model.f.cuda(), torch.cat([learn.u0, torch.zeros(learn.u0.size()).cuda()], dim=1).cuda(),
-                torch.linspace(0, 1, num_points).cuda(), method='midpoint').squeeze(1).cpu().detach().numpy()
+    xT = odeint(learn.model.f.to(device), torch.cat([learn.u0, torch.zeros(learn.u0.size()).to(device)], dim=1).to(device),
+                torch.linspace(0, 1, num_points).to(device), method='midpoint').squeeze(1).cpu().detach().numpy()
 
 
-a_M = torch.tensor(0)
-a_E = torch.tensor(10)
-x_fun = interp_torch(torch.linspace(0*T.detach().cpu().numpy()[0],T.detach().cpu().numpy()[0],num_points).to(device),torch.tensor(xT),device)
+a_M = -torch.tensor(10)
+a_E = torch.tensor(0)
+AllTime = torch.linspace(0*T.detach().cpu().numpy()[0],T.detach().cpu().numpy()[0],num_points).to(device)
+x_fun = interp_torch(AllTime,torch.tensor(xT).to(device)) 
+
 learn.model.f._set_control_parameters(a_M.to(device),a_E.to(device),x_fun,xT)
 
 with torch.no_grad():
-    xT_ctrl = odeint(learn.model.f.cuda(), torch.cat([learn.u0, torch.zeros(learn.u0.size()).cuda()], dim=1).cuda(),
-            torch.linspace(0, 1, num_points).cuda(), method='midpoint').squeeze(1).cpu().detach().numpy()
+    xT_ctrl = odeint(learn.model.f.to(device), torch.cat([learn.u0, torch.zeros(learn.u0.size()).to(device)], dim=1).to(device),
+            torch.linspace(0, 1, num_points).to(device), method='midpoint').squeeze(1).cpu().detach().numpy()
 
-vu = learn.model.f(torch.linspace(0, 1, num_points).cuda(), angles.detach().cuda(), V_only=True).cuda().detach().cpu().numpy()
+vu = learn.model.f(torch.linspace(0, 1, num_points).to(device), angles.detach().to(device), V_only=True).to(device).detach().cpu().numpy()
 
 plot_trajectories(xT=xT_ctrl, target=target.cpu(), V=vu[:, 0:v_in].reshape(num_points, v_in), angles=angles.numpy().reshape(num_points, v_in),
                   u=vu[:, :v_in].reshape(num_points, v_in), l1=1, l2=1, pendulum=pendulum, plot3D=False)
+
