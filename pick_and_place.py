@@ -6,7 +6,7 @@ from src.opt_limit_cycle_control.learners import OptEigManifoldLearner, ControlE
     CloseToPositionsAtTime, CloseToPositionAtHalfPeriod, CloseToActualPositionAtHalfPeriod
 from src.opt_limit_cycle_control.utils import DummyDataModule
 from src.opt_limit_cycle_control.plotter import plot_trajectories, animate_single_dp_trajectory
-from src.opt_limit_cycle_control.layers import KernelRegression, KernelFunc, ReluKernel
+from src.opt_limit_cycle_control.layers import KernelRegression, KernelFunc, ReluKernel, FourierEncoding
 
 import torch
 import torch.nn as nn
@@ -25,15 +25,15 @@ print(device)
 # Define the parameters needed for the problem
 v_in = 2
 v_out = 2
-hdim = 100
+hdim = 64
 training_epochs = 500
 lr = 1e-3
 spatial_dim = 2
 opt_strategy = 1
-l_period_k = 0.0
-alpha_p = 0.95
-alpha_s = 0.01
-alpha_mv = 0.01
+l_period_k = 1.0
+alpha_p = 0.0
+alpha_s = 0.05
+alpha_mv = 0.95
 l_task_k = 0.0
 l_task_2_k = 10
 
@@ -44,13 +44,34 @@ l1, l2 = 1.0, 1.0
 target = torch.tensor([1.5, 1.5]).reshape(2, 1).to(device) # target 1 [0.5, 0.5]
 use_target_angles = False
 
+
+# class Potential(nn.Module):
+#     def __init__(self, v_in, hdim):
+#         super(Potential, self).__init__()
+#         self.l1 = nn.Linear(v_in, hdim)
+#         self.tanh1 = nn.Tanh()
+#         self.l2 = nn.Linear(hdim, hdim)
+#         self.tanh2 = nn.Tanh()
+#         self.l3 = nn.Linear(hdim, hdim)
+#         self.l4 = nn.Linear(hdim, 1)
+#
+#     def forward(self, x):
+#         y = self.l1(x)
+#         y = self.tanh1(y)
+#         y = self.tanh2(self.l2(y)) + y
+#         y = self.tanh3(self.l3(y)) + y
+#         return self.l4(y)
+#
+
 # vector field parametrized by a NN
 V = nn.Sequential(
-    nn.Linear(v_in, hdim),
+    FourierEncoding(v_in),
+    nn.Linear(2 * v_in, hdim),
     nn.Tanh(),
     nn.Linear(hdim, hdim),
     nn.Tanh(),
     nn.Linear(hdim, 1))
+# V = Potential(v_in, hdim)
     #,
     #nn.Tanh())
 # discretization_thetas = torch.linspace(-math.pi, math.pi, 50)[0:-1]
@@ -68,7 +89,7 @@ def compute_opt_eigenmode(l_task_k, training_epochs):
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositionAtHalfPeriod(target),
                                     l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
                                     l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
-                                    spatial_dim=spatial_dim, lr=lr, u0_init=[-0.0, -0.0], u0_requires_grad=False) #u0_init = [-0.5, -0.5]
+                                     spatial_dim=spatial_dim, lr=lr, u0_init=[-0.0, -0.0], u0_requires_grad=False) #u0_init = [-0.5, -0.5]
     else:
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToActualPositionAtHalfPeriod(target, l1, l2),
                                     l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
@@ -115,7 +136,7 @@ def compute_opt_eigenmode(l_task_k, training_epochs):
 
 if __name__ == "__main__":
 
-    task_loss_coeff = [0.0, 0.001, 0.005, 0.01]#[0.0, 0.025, 0.05, 0.075, 0.1, 1.0]
-    training_epochs = [300, 500, 500, 500]
+    task_loss_coeff = [0.0, 1e-8, 1e-7, 1e-6, 1e-5]
+    training_epochs = [600, 600, 600, 600, 600]
     for i in range(len(task_loss_coeff)):
         compute_opt_eigenmode(task_loss_coeff[i], training_epochs[i])

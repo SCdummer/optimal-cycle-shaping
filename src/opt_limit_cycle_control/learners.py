@@ -86,11 +86,12 @@ class OptEigManifoldLearner(pl.LightningModule):
             periodicity_loss = self.periodicity_loss(init_cond, xT)
             sym_trajectory_loss = self.sym_trajectory_loss(xT, indices)
             middle_vel_loss = self.middle_vel_loss(xT)
-            avg_variance = self.avg_vec_field_variance(xT)
+            #avg_variance = self.avg_vec_field_variance(xT)
             alpha_sum = self.alpha_p + self.alpha_s + self.alpha_mv
             eig_loss = (self.alpha_p * periodicity_loss + self.alpha_s * sym_trajectory_loss + self.alpha_mv
                         * middle_vel_loss) / alpha_sum
-            return (1.0 + 1.0/avg_variance) * eig_loss
+            #return (1.0 + 1.0/avg_variance) * eig_loss
+            return eig_loss
 
     def eigenmode_loss(self, xT):
         return torch.sum(torch.square(xT[self.half_period_index, 2:4]))
@@ -101,15 +102,17 @@ class OptEigManifoldLearner(pl.LightningModule):
         return torch.mean(torch.var(vector_field, dim=0))
 
     def periodicity_loss(self, init_cond, xT):
-        return torch.norm(init_cond.squeeze(0)[0:2*self.spatial_dim] - xT[-1, :].cuda()) ** 2
+        return torch.sum(torch.square(init_cond.squeeze(0)[0:self.spatial_dim] - xT[-1, :self.spatial_dim].cuda())) + \
+               torch.sum(torch.square(init_cond.squeeze(0)[self.spatial_dim:2*self.spatial_dim] -
+                                      xT[-1, self.spatial_dim:2*self.spatial_dim].cuda())) / 100
 
     def sym_trajectory_loss(self, xT, indices):
         sym_indices = (xT.shape[0] - 1) - indices
-        return (torch.norm(xT[indices, 0:self.spatial_dim] - xT[sym_indices, 0:self.spatial_dim]) ** 2 +
-                torch.norm(xT[indices, self.spatial_dim:] + xT[sym_indices, self.spatial_dim:]) ** 2 ) / indices.numel()
+        return (torch.sum(torch.square(xT[indices, 0:self.spatial_dim] - xT[sym_indices, 0:self.spatial_dim])) +
+                torch.sum(torch.square(xT[indices, self.spatial_dim:] + xT[sym_indices, self.spatial_dim:])) / 100) / indices.numel()
 
     def middle_vel_loss(self, xT):
-        return torch.norm(xT[self.half_period_index, self.spatial_dim:])**2
+        return torch.sum(torch.square(xT[self.half_period_index, self.spatial_dim:]))
 
     def on_train_batch_start(self, batch, batch_idx, unused=0):
         period = self.model.f.T.data
@@ -130,7 +133,7 @@ class OptEigManifoldLearner(pl.LightningModule):
         if self.count % 7 == 0:
             self.epoch += 1
         self.count += 1
-        
+
         init_cond = torch.cat([self.u0, torch.zeros(1, self.spatial_dim + 1).cuda()], dim=1)
         xTl = self.forward(init_cond)
         xT, l = xTl[:, :-1], xTl[:, -1:]
@@ -141,8 +144,8 @@ class OptEigManifoldLearner(pl.LightningModule):
             indices = torch.randperm(self.half_period_index-1)[:num_sym_check_instances]
         else:
             indices = None
-        periodicity_loss = self.eigenmode_loss(xT) #self.l_period * self.eig_mode_loss(init_cond, xT, indices)
-        integral_task_loss = self.l_task_loss * l[-1]#torch.mean(l)
+        periodicity_loss = self.l_period * self.eig_mode_loss(init_cond, xT, indices)# self.eigenmode_loss(xT) #self.l_period * self.eig_mode_loss(init_cond, xT, indices)
+        integral_task_loss = torch.abs(self.model.f.T[0]) * self.l_task_loss * l[-1]#torch.mean(l)
         non_integral_task_loss = self.l_task_loss_2 * self.non_integral_task_loss(xT)
         beta = 1#self.beta_scheduler(self.epoch, 200)
         print('beta: ', beta)
