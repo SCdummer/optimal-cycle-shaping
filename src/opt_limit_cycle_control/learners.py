@@ -151,7 +151,7 @@ class OptEigManifoldLearner(pl.LightningModule):
         print('beta: ', beta)
         print('epoch: ', self.epoch)
         print('periodicity loss', periodicity_loss)
-        loss = beta * periodicity_loss + integral_task_loss + non_integral_task_loss
+        loss = periodicity_loss + non_integral_task_loss + beta*integral_task_loss
         print('                      ')
         print('                      ')
         print('periodicity loss multiplied by beta', periodicity_loss)
