@@ -147,7 +147,7 @@ class OptEigManifoldLearner(pl.LightningModule):
         periodicity_loss = self.l_period * self.eig_mode_loss(init_cond, xT, indices)# self.eigenmode_loss(xT) #self.l_period * self.eig_mode_loss(init_cond, xT, indices)
         integral_task_loss = torch.abs(self.model.f.T[0]) * self.l_task_loss * l[-1]#torch.mean(l)
         non_integral_task_loss = self.l_task_loss_2 * self.non_integral_task_loss(xT)
-        beta = self.beta_scheduler(self.epoch, 150)
+        beta = 1#self.beta_scheduler(self.epoch, 150)
         print('beta: ', beta)
         print('epoch: ', self.epoch)
         print('periodicity loss', periodicity_loss)
