@@ -1,12 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation, PillowWriter, ImageMagickWriter, HTMLWriter, FFMpegWriter, ImageMagickFileWriter
+import os
 
 m, l, g = 1., 1, 9.81
 
 m1, m2 = 1., 1.
 
-def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3D=False, c_eff_penalty=0.0, T=1.0, q1=[], q2=[], u2=[]):
+def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3D=False, c_eff_penalty=0.0, T=1.0, q1=[], q2=[], u2=[], plotting_dir="Figures"):
 
     if pendulum:
         if plot3D==False:
@@ -47,7 +48,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
 
             gif = FuncAnimation(fig, animate, fargs=(x1, y1, o, c1, xt, yt),
                                 blit=False, repeat=True, frames=xT.shape[0], interval=1)
-            gif.save("Figures/PendulumTrajectory_" + str(c_eff_penalty) + "_.gif", dpi=150, writer=PillowWriter(fps=30))
+            gif.save(os.path.join(plotting_dir, "PendulumTrajectory_") + str(c_eff_penalty) + "_.gif", dpi=150, writer=PillowWriter(fps=30))
             ax.clear()
 
             p1 = ax.scatter(x1, y1, c=np.linspace(0, 1, xT.shape[0], endpoint=False),
@@ -56,21 +57,21 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             ax.set_xlim(-1.5, 1.5)
             ax.set_ylim(-1.5, 1.5)
             fig.colorbar(p1)
-            plt.savefig('Figures/PendulumTrajectory' + str(c_eff_penalty)+ '.png')
+            plt.savefig(os.path.join(plotting_dir, 'PendulumTrajectory' + str(c_eff_penalty)+ '.png'))
 
             fig2 = plt.figure()
             ax2 = plt.axes()
             p2 = ax2.scatter(xall, yall, c=V, cmap='magma', s=15)
             pt = ax2.scatter(xt, yt, c='g', s=30, marker='x')
             fig2.colorbar(p2)
-            plt.savefig('Figures/Potential' + str(c_eff_penalty)+ '.png')
+            plt.savefig(os.path.join(plotting_dir, 'Potential' + str(c_eff_penalty)+ '.png'))
 
             fig3 = plt.figure()
             ax3 = plt.axes()
             p3 = ax3.scatter(xall, yall, c=u, cmap='magma', s=15)
             ax3.scatter(xt, yt, c='g', s=30, marker='x')
             fig3.colorbar(p3)
-            plt.savefig('Figures/ControlInput' + str(c_eff_penalty)+ '.png')
+            plt.savefig(os.path.join(plotting_dir,'ControlInput' + str(c_eff_penalty)+ '.png'))
 
             t = np.linspace(0, 1, angles.shape[0])
             fig4 = plt.figure()
@@ -85,7 +86,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             fig4.colorbar(p6)
             fig4.colorbar(p7)
             fig4.tight_layout()
-            plt.savefig('Figures/Learned_Gravitational_Potential' + str(c_eff_penalty)+ '.png')
+            plt.savefig(os.path.join(plotting_dir,'Learned_Gravitational_Potential' + str(c_eff_penalty)+ '.png'))
 
             t = np.linspace(0, 1*T, 1000)
             q = np.linspace(np.min(xT[:,0]), np.max(xT[:,0]), 1000)
@@ -105,7 +106,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             fig4.colorbar(p6)
             fig4.colorbar(p7)
             fig4.tight_layout()
-            plt.savefig('Figures/Learned_Gravitational_Potential_Interval' + str(c_eff_penalty)+ '.png')
+            plt.savefig(os.path.join(plotting_dir, 'Learned_Gravitational_Potential_Interval' + str(c_eff_penalty)+ '.png'))
 
         else:
             pass
@@ -150,7 +151,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             ax.set_ylim(-2.5, 2.5)
             fig.colorbar(p1)
             fig.colorbar(p2)
-            plt.savefig('Figures/DoublePendulumTrajectory' + str(c_eff_penalty) + '.png')
+            plt.savefig(os.path.join(plotting_dir,'DoublePendulumTrajectory' + str(c_eff_penalty) + '.png'))
             ax.clear()
 
             c1 = plt.cm.twilight(np.linspace(0, 1, xT.shape[0], endpoint=False))
@@ -172,7 +173,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
 
             gif = FuncAnimation(fig, animate, fargs=(x1, x2, y1, y2, o, c1, c2, xt1, yt1, xt2, yt2),
                                 blit=True, repeat=True, frames=xT.shape[0], interval=1)
-            gif.save("Figures/DoublePendulumTrajectory_" + str(c_eff_penalty) + "_.gif", dpi=150,
+            gif.save(os.path.join(plotting_dir,"DoublePendulumTrajectory_" + str(c_eff_penalty) + "_.gif"), dpi=150,
                      writer=PillowWriter(fps=30))
             ax.clear()
 
@@ -198,7 +199,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             #ax.set_xlabel('Angles', fontsize=10)
             #ax.set_ylabel('Value', fontsize=10)
             #fig4.tight_layout()
-            plt.savefig('Figures/DoublePendulumLearned_Potential' + str(c_eff_penalty) + '.png')
+            plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_Potential' + str(c_eff_penalty) + '.png'))
             ax4.clear()
 
             fig4 = plt.figure()
@@ -220,7 +221,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             # ax.set_xlabel('Angles', fontsize=10)
             # ax.set_ylabel('Value', fontsize=10)
             # fig4.tight_layout()
-            plt.savefig('Figures/DoublePendulumLearned_GravityPotential' + str(c_eff_penalty) + '.png')
+            plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_GravityPotential' + str(c_eff_penalty) + '.png'))
             ax4.clear()
 
             fig4 = plt.figure()
@@ -242,7 +243,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             # ax.set_xlabel('Angles', fontsize=10)
             # ax.set_ylabel('Value', fontsize=10)
             # fig4.tight_layout()
-            plt.savefig('Figures/DoublePendulumLearned_OverallPotential' + str(c_eff_penalty) + '.png')
+            plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_OverallPotential' + str(c_eff_penalty) + '.png'))
             ax4.clear()
 
             # grad potential
@@ -267,7 +268,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             #ax.set_xlabel('Angles', fontsize=10)
             #ax.set_ylabel('Value', fontsize=10)
             fig4.tight_layout()
-            plt.savefig('Figures/DoublePendulumLearned_GradPotential_q1_' + str(c_eff_penalty) + '.png')
+            plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_GradPotential_q1_' + str(c_eff_penalty) + '.png'))
             ax4.clear()
 
             # grad potential
@@ -292,7 +293,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             #ax.set_xlabel('Angles', fontsize=10)
             #ax.set_ylabel('Value', fontsize=10)
             fig4.tight_layout()
-            plt.savefig('Figures/DoublePendulumLearned_GradPotential_q2_' + str(c_eff_penalty) + '.png')
+            plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_GradPotential_q2_' + str(c_eff_penalty) + '.png'))
             ax4.clear()
 
             # grad potential
@@ -316,7 +317,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             #ax.set_xlabel('Angles', fontsize=10)
             #ax.set_ylabel('Value', fontsize=10)
             #fig4.tight_layout()
-            #plt.savefig('Figures/DoublePendulumLearned_GradPotentialScaled_q1_' + str(c_eff_penalty) + '.png')
+            #plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_GradPotentialScaled_q1_' + str(c_eff_penalty) + '.png'))
             #ax4.clear()
             # grad potential
             #t = np.linspace(0, 1 * T, u2.shape[0])
@@ -339,7 +340,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             # ax.set_xlabel('Angles', fontsize=10)
             # ax.set_ylabel('Value', fontsize=10)
             #fig4.tight_layout()
-            #plt.savefig('Figures/DoublePendulumLearned_GradPotentialScaled_q2_' + str(c_eff_penalty) + '.png')
+            #plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_GradPotentialScaled_q2_' + str(c_eff_penalty) + '.png'))
             #ax4.clear()
 
             # grad potential
@@ -362,7 +363,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             ##ax.set_xlabel('Angles', fontsize=10)
             #ax.set_ylabel('Value', fontsize=10)
             #fig4.tight_layout()
-            #plt.savefig('Figures/DoublePendulumLearned_GradPotential_q12_' + str(c_eff_penalty) + '.png')
+            #plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_GradPotential_q12_' + str(c_eff_penalty) + '.png'))
             #ax4.clear()
 
             #t = np.linspace(0, 1*T, q1.shape[0])
@@ -383,7 +384,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             #ax.set_xlabel('Time', fontsize=10)
             #ax.set_ylabel('Value', fontsize=10)
             #fig4.tight_layout()
-            #plt.savefig('Figures/DoublePendulumLearned_Potential_ScaledT' + str(c_eff_penalty) + '.png')
+            #plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_Potential_ScaledT' + str(c_eff_penalty) + '.png'))
 
             #t = np.linspace(0, 1 * T, angles.shape[0])
             #fig4 = plt.figure()
@@ -403,7 +404,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             # ax.set_xlabel('Time', fontsize=10)
             # ax.set_ylabel('Value', fontsize=10)
             #fig4.tight_layout()
-            #plt.savefig('Figures/DoublePendulumLearned_GradPotential_ScaledT' + str(c_eff_penalty) + '.png')
+            #plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_GradPotential_ScaledT' + str(c_eff_penalty) + '.png'))
 
 
 
@@ -413,7 +414,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             pass
 
 
-def animate_single_dp_trajectory(xT_raw, l1=1, l2=1):
+def animate_single_dp_trajectory(xT_raw, l1=1, l2=1, plotting_dir="Figures"):
     l1, l2 = l1, l2
     fig = plt.figure()
     ax = plt.axes()
@@ -447,7 +448,7 @@ def animate_single_dp_trajectory(xT_raw, l1=1, l2=1):
 
     gif = FuncAnimation(fig, animate, fargs=(x1, x2, y1, y2, o, c1, c2),
                         blit=True, repeat=True, frames=xT.shape[0], interval=1)
-    gif.save("Figures/DoublePendulumEigenModeTrajectory.gif", dpi=150, writer=PillowWriter(fps=30))
+    gif.save(os.path.join(plotting_dir,"DoublePendulumEigenModeTrajectory.gif"), dpi=150, writer=PillowWriter(fps=30))
 
 
 
