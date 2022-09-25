@@ -19,6 +19,7 @@ import numpy as np
 
 import os
 import json
+from datetime import datetime
 
 import math
 
@@ -28,7 +29,7 @@ print(device)
 # Define the parameters needed for the problem
 v_in = 2
 v_out = 2
-hdim = 64
+hdim = 100
 training_epochs = 500
 lr = 1e-3
 spatial_dim = 2
@@ -64,6 +65,25 @@ config = {
     "use_target_angles": use_target_angles
 }
 
+class Potential(nn.Module):
+    def __init__(self, v_in, hdim):
+        super(Potential, self).__init__()
+        self.fourier = FourierEncoding(v_in)
+        self.l1 = nn.Linear(2 * v_in, hdim)
+        self.tanh1 = nn.Tanh()
+        self.l2 = nn.Linear(hdim, hdim)
+        self.tanh2 = nn.Tanh()
+        self.l3 = nn.Linear(hdim, hdim)
+        self.l4 = nn.Linear(hdim, 1)
+
+    def forward(self, x):
+        y = self.fourier(x)
+        y = self.l1(y)
+        y = self.tanh1(y)
+        y = self.tanh2(self.l2(y)) + y
+        return self.l4(y)
+
+
 # vector field parametrized by a NN
 V = nn.Sequential(
     FourierEncoding(v_in),
@@ -73,6 +93,7 @@ V = nn.Sequential(
     nn.Tanh(),
     nn.Linear(hdim, 1))
 
+#V = Potential(v_in, hdim)
 
 def compute_opt_eigenmode(target, u0_init, training_epochs, saving_dir):
 
@@ -107,12 +128,12 @@ def compute_opt_eigenmode(target, u0_init, training_epochs, saving_dir):
     if use_target_angles:
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositionAtHalfPeriod(target),
                                     l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
-                                    l_task_loss=0.0, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
+                                    l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
                                      spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False) #u0_init = [-0.5, -0.5]
     else:
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToActualPositionAtHalfPeriod(target, l1, l2),
                                     l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
-                                    l_task_loss=0.0, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
+                                    l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
                                     spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False)
 
     logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
@@ -177,9 +198,20 @@ if __name__ == "__main__":
     for i in range(len(targets)):
         target = targets[i].reshape(2, 1).to(device)
         u0_init = u0_inits[i]
-        saving_dir = os.path.join("Experiments", "DoublePendulum_{}_{}_to_{}_{}_no_reg".format(u0_init[0], u0_init[1],
+
+        # Get the date and time the experiment started
+        now = datetime.now()
+        date_string = now.strftime("%d-%m-%Y_%Hh-%Mm-%Ss")
+
+        # Get the directory where to save things
+        main_dir = os.path.join("Experiments", "DoublePendulum_{}_{}_to_{}_{}_no_reg".format(u0_init[0], u0_init[1],
                                                                                                target[0].item(),
                                                                                                target[1].item()))
+
+        if not os.path.isdir(main_dir):
+            os.mkdir(main_dir)
+
+        saving_dir = os.path.join(main_dir, date_string)
         if not os.path.isdir(saving_dir):
             os.mkdir(saving_dir)
             os.mkdir(os.path.join(saving_dir, "Figures"))

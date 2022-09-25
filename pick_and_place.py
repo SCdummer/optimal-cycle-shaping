@@ -25,7 +25,7 @@ print(device)
 # Define the parameters needed for the problem
 v_in = 2
 v_out = 2
-hdim = 64
+hdim = 100
 training_epochs = 500
 lr = 1e-3
 spatial_dim = 2
@@ -136,7 +136,7 @@ def compute_opt_eigenmode(l_task_k, training_epochs):
 
 if __name__ == "__main__":
 
-    task_loss_coeff = [0.0, 1e-8, 1e-7, 1e-6, 1e-5]
-    training_epochs = [600, 600, 600, 600, 600]
+    task_loss_coeff = [0.0]
+    training_epochs = [600]
     for i in range(len(task_loss_coeff)):
         compute_opt_eigenmode(task_loss_coeff[i], training_epochs[i])
