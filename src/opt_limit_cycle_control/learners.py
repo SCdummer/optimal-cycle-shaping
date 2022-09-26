@@ -102,14 +102,29 @@ class OptEigManifoldLearner(pl.LightningModule):
         return torch.mean(torch.var(vector_field, dim=0))
 
     def periodicity_loss(self, init_cond, xT):
+        # return torch.sum(torch.square(init_cond.squeeze(0)[0:self.spatial_dim] - xT[-1, :self.spatial_dim].cuda())) + \
+        #        torch.sum(torch.square(init_cond.squeeze(0)[self.spatial_dim:2*self.spatial_dim] -
+        #                               xT[-1, self.spatial_dim:2*self.spatial_dim].cuda())) / 100
         return torch.sum(torch.square(init_cond.squeeze(0)[0:self.spatial_dim] - xT[-1, :self.spatial_dim].cuda())) + \
                torch.sum(torch.square(init_cond.squeeze(0)[self.spatial_dim:2*self.spatial_dim] -
                                       xT[-1, self.spatial_dim:2*self.spatial_dim].cuda())) / 100
 
+    def smooth_max(self, inpt, scaling=2.0):
+        #square_val = torch.square(inpt)
+        #max_val = torch.max(square_val)
+        #exp_val = torch.exp(scaling * (square_val - max_val))
+        #return torch.log(torch.sum(exp_val) - inpt.size(0) + 1.0) / scaling
+        square_val = torch.square(inpt)
+        return torch.max(square_val)
+
     def sym_trajectory_loss(self, xT, indices):
         sym_indices = (xT.shape[0] - 1) - indices
-        return (torch.sum(torch.square(xT[indices, 0:self.spatial_dim] - xT[sym_indices, 0:self.spatial_dim])) +
-                torch.sum(torch.square(xT[indices, self.spatial_dim:] + xT[sym_indices, self.spatial_dim:])) / 100) / indices.numel()
+
+        #return (torch.sum(torch.square(xT[indices, 0:self.spatial_dim] - xT[sym_indices, 0:self.spatial_dim])) +
+        #        torch.sum(torch.square(xT[indices, self.spatial_dim:] + xT[sym_indices, self.spatial_dim:])) / 100) / indices.numel()
+
+        return self.smooth_max(xT[indices, 0:self.spatial_dim] - xT[sym_indices, 0:self.spatial_dim]) + \
+               self.smooth_max(xT[indices, self.spatial_dim:] + xT[sym_indices, self.spatial_dim:]) / 100
 
     def middle_vel_loss(self, xT):
         return torch.sum(torch.square(xT[self.half_period_index, self.spatial_dim:]))

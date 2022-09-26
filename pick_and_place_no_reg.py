@@ -38,7 +38,7 @@ l_period_k = 1.0
 alpha_p = 0.0
 alpha_s = 0.05
 alpha_mv = 0.95
-l_task_k = 0.0
+l_task_k = 1e-7
 l_task_2_k = 10
 
 # lengths of the pendulum bars
