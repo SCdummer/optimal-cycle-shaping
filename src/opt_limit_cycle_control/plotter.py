@@ -167,7 +167,8 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
                 p2 = ax.scatter(x2[0:i], y2[0:i], color=c2[0:i], s=10)
 
                 # pt1 = ax.scatter(xt1, yt1, c='g', s=30, marker='x')
-                pt2 = ax.scatter(xt2, yt2, c='b', s=30, marker='x')
+                #pt1 = ax.scatter(x2[0], y2[0], c='r', s=30, marker='x')
+                pt2 = ax.scatter(xt2, yt2, c='r', s=30, marker='x')
                 p0 = ax.scatter(o[0], o[0], c='k', s=30, zorder=10)
                 return p1, p2
 
@@ -254,7 +255,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             fig4 = plt.figure()
             ax4 = plt.axes()
             c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
-            plt.plot(t, u2[:, 0], c='tab:orange', label=r'$u_2=\nabla_{q_2}V_{\theta}$', linewidth=3)
+            plt.plot(t, u2[:, 1], c='tab:orange', label=r'$u_2=\nabla_{q_2}V_{\theta}$', linewidth=3)
             ax4.legend()
             ax4.set_title('Gradient of Learned Potential over Period T={:.3f}'.format(T))
             fig4.tight_layout()

@@ -229,7 +229,7 @@ class ControlEffort(nn.Module):
     def forward(self, t, x):
         with torch.set_grad_enabled(True):
             if x.shape[1] == 2:
-                q = x[:,:1].requires_grad_(True)
+                q = x[:, :1].requires_grad_(True)
             else:
                 q = x[:, :2].requires_grad_(True)
             u = self.f._energy_shaping(q)
