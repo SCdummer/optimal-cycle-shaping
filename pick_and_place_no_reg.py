@@ -40,6 +40,8 @@ alpha_s = 0.05
 alpha_mv = 0.95
 l_task_k = 1e-7
 l_task_2_k = 10
+T_initial = 2.0
+T_requires_grad = False
 
 # lengths of the pendulum bars
 l1, l2 = 1.0, 1.0
@@ -98,7 +100,7 @@ V = nn.Sequential(
 def compute_opt_eigenmode(target, u0_init, training_epochs, saving_dir):
 
     # Create the model
-    f = ControlledSystemDoublePendulum(V).to(device)
+    f = ControlledSystemDoublePendulum(V, T_initial=T_initial, T_requires_grad=T_requires_grad).to(device)
     aug_f = AugmentedDynamicsDoublePendulum(f, ControlEffort(f))
 
     # Create the config file

@@ -114,8 +114,10 @@ class OptEigManifoldLearner(pl.LightningModule):
         #max_val = torch.max(square_val)
         #exp_val = torch.exp(scaling * (square_val - max_val))
         #return torch.log(torch.sum(exp_val) - inpt.size(0) + 1.0) / scaling
-        square_val = torch.square(inpt)
-        return torch.max(square_val)
+        # square_val = torch.square(inpt)
+        # return torch.max(square_val)
+        abs_val = torch.sum(torch.abs(inpt), dim=-1)
+        return torch.max(abs_val)
 
     def sym_trajectory_loss(self, xT, indices):
         sym_indices = (xT.shape[0] - 1) - indices

@@ -84,9 +84,13 @@ class AugmentedDynamics(nn.Module):
 
 class ControlledSystemDoublePendulum(nn.Module):
     # Elastic Double Pendulum Model
-    def __init__(self, V):
+    def __init__(self, V, T_initial=1.0, T_requires_grad=True):
         super().__init__()
-        self.V, self.T, self.n = V, torch.nn.Parameter(torch.tensor([1.0])), 2
+        if T_requires_grad:
+            self.V, self.T, self.n = V, torch.nn.Parameter(torch.tensor([T_initial])), 2
+        else:
+            self.V, self.T, self.n = V, torch.tensor([T_initial]), 2
+            self.T.requires_grad = False
 
     def forward(self, t, x, V_only=False):
         if V_only:
