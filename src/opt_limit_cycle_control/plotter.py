@@ -162,6 +162,44 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             c1 = plt.cm.twilight(np.linspace(0, 1, xT.shape[0], endpoint=False))
             c2 = plt.cm.twilight(np.linspace(0, 1, xT.shape[0], endpoint=False))
 
+            # plot snapshots
+            for i in range(0, x2.shape[0], 10):
+                ax.clear()
+                ax.set_xlim(-2.5, 2.5)
+                ax.set_ylim(-2.5, 2.5)
+                l1 = ax.plot((o[i], x1[i]), (o[i], y1[i]), color=c1[i])
+                l2 = ax.plot((x2[i], x1[i]), (y2[i], y1[i]), color=c2[i])
+                p1 = ax.scatter(x1[0:i], y1[0:i], color=c1[0:i], s=10)
+                p2 = ax.scatter(x2[0:i], y2[0:i], color=c2[0:i], s=10)
+
+                pt0 = ax.scatter(x1[0], y1[0], s=30, color="none", edgecolor="blue")
+                pt1 = ax.scatter(x2[0], y2[0], s=30, color="none", edgecolor="blue")
+                pt2 = ax.scatter(xt2, yt2, c='r', s=30, marker='x')
+                p0 = ax.scatter(o[0], o[0], c='k', s=30, zorder=10)
+                results_dir = os.path.join(plotting_dir, 'Snapshots/')
+                if not os.path.isdir(results_dir):
+                    os.makedirs(results_dir)
+                plt.savefig(os.path.join(results_dir, 'DoublePendulumTrajectory_t='+str(i)+ '_' + str(c_eff_penalty) + '.png'))
+            i = 999
+            ax.clear()
+            ax.set_xlim(-2.5, 2.5)
+            ax.set_ylim(-2.5, 2.5)
+            l1 = ax.plot((o[i], x1[i]), (o[i], y1[i]), color=c1[i])
+            l2 = ax.plot((x2[i], x1[i]), (y2[i], y1[i]), color=c2[i])
+            p1 = ax.scatter(x1[0:i], y1[0:i], color=c1[0:i], s=10)
+            p2 = ax.scatter(x2[0:i], y2[0:i], color=c2[0:i], s=10)
+
+            pt0 = ax.scatter(x1[0], y1[0], s=30, color="none", edgecolor="blue")
+            pt1 = ax.scatter(x2[0], y2[0], s=30, color="none", edgecolor="blue")
+            pt2 = ax.scatter(xt2, yt2, c='r', s=30, marker='x')
+            p0 = ax.scatter(o[0], o[0], c='k', s=30, zorder=10)
+            results_dir = os.path.join(plotting_dir, 'Snapshots/')
+            if not os.path.isdir(results_dir):
+                os.makedirs(results_dir)
+            plt.savefig(
+                os.path.join(results_dir, 'DoublePendulumTrajectory_t=' + str(i) + '_' + str(c_eff_penalty) + '.png'))
+
+
             def animate(i, x1, x2, y1, y2, o, c1, c2, xt1, yt1, xt2, yt2):
                 ax.clear()
                 ax.set_xlim(-2.5, 2.5)
