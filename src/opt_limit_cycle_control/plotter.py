@@ -147,6 +147,11 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
                             cmap='twilight', s=10)
             p2 = ax.scatter(x2, y2, c=np.linspace(0, 1, xT.shape[0], endpoint=False),
                             cmap='twilight', s=10)
+            pt0 = ax.scatter(x1[0], y1[0], s=30, color="none", edgecolor="blue")
+            pt1 = ax.scatter(x2[0], y2[0], s=30, color="none", edgecolor="blue")
+            #pt0 = ax.scatter(x1[-1:], y1[-1:], s=30, color="none", edgecolor="blue")
+            #pt1 = ax.scatter(x2[-1:], y2[-1:], s=30, color="none", edgecolor="blue")
+            pt2 = ax.scatter(xt2, yt2, c='r', s=30, marker='x')
             ax.set_xlim(-2.5, 2.5)
             ax.set_ylim(-2.5, 2.5)
             cbar = fig.colorbar(p2)
@@ -167,7 +172,10 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
                 p2 = ax.scatter(x2[0:i], y2[0:i], color=c2[0:i], s=10)
 
                 # pt1 = ax.scatter(xt1, yt1, c='g', s=30, marker='x')
-                #pt1 = ax.scatter(x2[0], y2[0], c='r', s=30, marker='x')
+                pt0 = ax.scatter(x1[0], y1[0], s=30, color="none", edgecolor="blue")
+                pt1 = ax.scatter(x2[0], y2[0], s=30, color="none", edgecolor="blue")
+                #pt0 = ax.scatter(x1[-1:], y1[-1:], s=30, color="none", edgecolor="blue")
+                #pt1 = ax.scatter(x2[-1:], y2[-1:], s=30, color="none", edgecolor="blue")
                 pt2 = ax.scatter(xt2, yt2, c='r', s=30, marker='x')
                 p0 = ax.scatter(o[0], o[0], c='k', s=30, zorder=10)
                 return p1, p2
@@ -337,6 +345,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             plt.plot(t, np.square(u2[:, 1]), c='tab:orange', label="$||u_2||^2$", linestyle='dashed', linewidth=2)
             plt.plot(t, np.square(u2[:, 0]) + np.square(u2[:, 1]), c='tab:green', label="$||u_1||^2 + ||u_2||^2$", linewidth=3)
             ax4.legend()
+            ax4.set_ylim(-1000, 30000)
             ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
             fig4.tight_layout()
             plt.savefig(os.path.join(plotting_dir,

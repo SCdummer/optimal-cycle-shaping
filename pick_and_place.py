@@ -19,6 +19,10 @@ import numpy as np
 
 import math
 
+import os
+import json
+from datetime import datetime
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
@@ -80,9 +84,32 @@ V = nn.Sequential(
 # kernel = KernelFunc(ReluKernel(scaling), kernel_locations, is_torus=True)
 # V = KernelRegression(kernel)
 
-def compute_opt_eigenmode(l_task_k, training_epochs):
+def compute_opt_eigenmode(l_task_k, training_epochs, u0_init, saving_dir, target):
     f = ControlledSystemDoublePendulum(V).to(device)
     aug_f = AugmentedDynamicsDoublePendulum(f, ControlEffort(f))
+
+    # Create the config file
+    config = {
+        "v_in": v_in,
+        "v_out": v_out,
+        "hdim": hdim,
+        "lr": lr,
+        "spatial_dim": spatial_dim,
+        "opt_strategy": opt_strategy,
+        "l_period_k": l_period_k,
+        "alpha_p": alpha_p,
+        "alpha_s": alpha_s,
+        "alpha_mv": alpha_mv,
+        "l_task_k": 0.0,
+        "l_task_2_k": l_task_2_k,
+        "l1": l1,
+        "l2": l2,
+        "use_target_angles": use_target_angles,
+        "u0_init": tuple(u0_init),
+        "u0_requires_grad": False,
+        "target": (target[0].item(), target[1].item()),
+        "training_epochs": training_epochs
+    }
 
     # Train the Energy shaping controller.
     if use_target_angles:
@@ -129,14 +156,53 @@ def compute_opt_eigenmode(l_task_k, training_epochs):
     vu2 = learn.model.f(torch.linspace(0, 1, num_points).cuda(), angles.detach().cuda(),
                        V_only=True).cuda().detach().cpu().numpy()
     T = learn.model.f.T[0].item()
+
+    plotting_dir = os.path.join(saving_dir, "Figures")
     plot_trajectories(xT=xT, target=target.reshape(1, -1).cpu(), V=vu[:, 0].reshape(num_data*num_data, 1),
                       angles=angles.numpy().reshape(num_points, v_in), u=vu[:, -v_in:].reshape(num_data*num_data, v_in),
-                      l1=1, l2=1, pendulum=False, plot3D=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(), q2=q2.cpu().numpy(), u2=vu2[:, -v_in:].reshape(num_points, v_in))
+                      l1=1, l2=1, pendulum=False, plot3D=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(),
+                      q2=q2.cpu().numpy(), u2=vu2[:, -v_in:].reshape(num_points, v_in), plotting_dir=plotting_dir)
+
+    print("Created and saved the plots")
+
+    print("Saving the model")
+    torch.save(learn.model.state_dict(), os.path.join(saving_dir, "model_state_dict.pt"))
+
+    print("Saving the hyperparameters and, if applicable, the learned initial condition in JSON format")
+    with open(os.path.join(saving_dir, 'config.json'), 'w') as f:
+        json.dump(config, f)
+
     print('Job is done!')
 
 if __name__ == "__main__":
 
-    task_loss_coeff = [0.0]
-    training_epochs = [600]
+    task_loss_coeff = [0.0, 0.0001, 0.0005]
+    training_epochs = [600, 600, 600]
+    targets = torch.tensor([1.5, 1.5])#[torch.tensor([1.5, 1.5])], torch.tensor([0.75, 0.75]), torch.tensor([math.pi + 0.5, 0.0])]
+    u0_inits = [0.0, 0.0]#[[0.0, 0.0], [-0.5, -0.5], [math.pi - 0.5, 0.0]]
+
     for i in range(len(task_loss_coeff)):
-        compute_opt_eigenmode(task_loss_coeff[i], training_epochs[i])
+        target = targets.reshape(2, 1).to(device)
+        u0_init = u0_inits
+
+        # Get the date and time the experiment started
+        now = datetime.now()
+        date_string = now.strftime("%d-%m-%Y_%Hh-%Mm-%Ss")
+
+        # Get the directory where to save things
+        main_dir = os.path.join("Experiments_LearnableT", "DoublePendulum_{}_{}_to_{}_{}".format(u0_init[0], u0_init[1],
+                                                                                               target[0].item(),
+                                                                                               target[1].item()))
+
+        if not os.path.isdir(main_dir):
+            os.mkdir(main_dir)
+
+        saving_dir = os.path.join(main_dir, date_string)
+        if not os.path.isdir(saving_dir):
+            os.mkdir(saving_dir)
+            os.mkdir(os.path.join(saving_dir, "Figures"))
+
+        compute_opt_eigenmode(task_loss_coeff[i], training_epochs[i], u0_inits, saving_dir, target)
+
+
+

@@ -8,7 +8,8 @@ from torchdiffeq import odeint, odeint_adjoint
 class OptEigManifoldLearner(pl.LightningModule):
     def __init__(self, model: nn.Module, non_integral_task_loss_func: nn.Module, l_period=1.0, alpha_p=1.0, alpha_s=0.0,
                  alpha_mv=0.0, l_task_loss=1.0, l_task_loss_2=1.0, lr=0.001, sensitivity='autograd', opt_strategy=1.0,
-                 spatial_dim=1, min_period=0, max_period=None, times=None, u0_init=None, u0_requires_grad=True):
+                 spatial_dim=1, min_period=0, max_period=None, times=None, u0_init=None, u0_requires_grad=True,
+                 training_epochs=1):
         super().__init__()
         self.model = model
         self.spatial_dim = spatial_dim
@@ -42,6 +43,7 @@ class OptEigManifoldLearner(pl.LightningModule):
         self.maxT = max_period
         self.epoch = 0
         self.count = 0
+        self.training_epochs = training_epochs
         assert min_period >= 0, "the minimum period should always be larger or equal to 0"
         assert max_period is None or max_period >= 0, "the maximum period should always be larger or equal to 0"
         if self.times is not None:
@@ -164,7 +166,10 @@ class OptEigManifoldLearner(pl.LightningModule):
         periodicity_loss = self.l_period * self.eig_mode_loss(init_cond, xT, indices)# self.eigenmode_loss(xT) #self.l_period * self.eig_mode_loss(init_cond, xT, indices)
         integral_task_loss = torch.abs(self.model.f.T[0]) * self.l_task_loss * l[-1]#torch.mean(l)
         non_integral_task_loss = self.l_task_loss_2 * self.non_integral_task_loss(xT)
-        beta = 1#self.beta_scheduler(self.epoch, 150)
+        if self.l_task_loss == 0.0:
+            beta = 1#self.beta_scheduler(self.epoch, 150)
+        else:
+            beta = self.beta_scheduler(self.epoch, self.training_epochs)
         print('beta: ', beta)
         print('epoch: ', self.epoch)
         print('periodicity loss', periodicity_loss)
