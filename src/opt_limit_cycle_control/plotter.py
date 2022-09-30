@@ -383,7 +383,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             plt.plot(t, np.square(u2[:, 1]), c='tab:orange', label="$||u_2||^2$", linestyle='dashed', linewidth=2)
             plt.plot(t, np.square(u2[:, 0]) + np.square(u2[:, 1]), c='tab:green', label="$||u_1||^2 + ||u_2||^2$", linewidth=3)
             ax4.legend()
-            ax4.set_ylim(-1000, 30000)
+            #ax4.set_ylim(-1000, 30000)
             ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
             fig4.tight_layout()
             plt.savefig(os.path.join(plotting_dir,

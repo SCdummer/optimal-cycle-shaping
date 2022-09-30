@@ -29,9 +29,9 @@ print(device)
 # Define the parameters needed for the problem
 v_in = 2
 v_out = 2
-hdim = 100
+hdim = 256#100
 training_epochs = 500
-lr = 5e-4# 1e-3
+lr = 1e-3# 1e-3
 spatial_dim = 2
 opt_strategy = 1
 l_period_k = 1.0
@@ -129,15 +129,15 @@ def compute_opt_eigenmode(target, u0_init, training_epochs, saving_dir, l_task_k
     # Train the Energy shaping controller.
     if use_target_angles:
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositionAtHalfPeriod(target),
-                                    l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
-                                    l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
-                                     spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
+                                      l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
+                                      l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
+                                       spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
                                       training_epochs=training_epochs) #u0_init = [-0.5, -0.5]
     else:
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToActualPositionAtHalfPeriod(target, l1, l2),
-                                    l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
-                                    l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
-                                    spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
+                                      l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
+                                      l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
+                                      spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
                                       training_epochs=training_epochs)
 
     logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
@@ -178,7 +178,8 @@ def compute_opt_eigenmode(target, u0_init, training_epochs, saving_dir, l_task_k
     plotting_dir = os.path.join(saving_dir, "Figures")
     plot_trajectories(xT=xT, target=target.reshape(1, -1).cpu(), V=vu[:, 0].reshape(num_data*num_data, 1),
                       angles=angles.numpy().reshape(num_points, v_in), u=vu[:, -v_in:].reshape(num_data*num_data, v_in),
-                      l1=1, l2=1, pendulum=False, plot3D=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(), q2=q2.cpu().numpy(), u2=vu2[:, -v_in:].reshape(num_points, v_in), plotting_dir=plotting_dir)
+                      l1=1, l2=1, pendulum=False, plot3D=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(),
+                      q2=q2.cpu().numpy(), u2=vu2[:, -v_in:].reshape(num_points, v_in), plotting_dir=plotting_dir)
     print("Created and saved the plots")
 
     print("Saving the model")
@@ -196,12 +197,12 @@ if __name__ == "__main__":
         os.mkdir("Experiments")
 
     training_epochs = [600, 600, 600]
-    u0_inits = [[0.0, 0.0], [-0.5, -0.5], [math.pi - 0.5, 0.0]]
-    targets = [torch.tensor([1.5, 1.5]), torch.tensor([0.75, 0.75]), torch.tensor([math.pi + 0.5, 0.0])]
-    l_task_k = 0.00000001
-    T_initial = [1.75, 2.0, 1.25]
+    u0_inits = [[-0.5, -0.5], [-0.5, -0.5], [- 0.5, -0.5]]#[[0.0, 0.0], [-0.5, -0.5], [math.pi - 0.5, 0.0]]
+    targets = [torch.tensor([0.75, 0.75]), torch.tensor([0.75, 0.75]), torch.tensor([0.75, 0.75])]#[torch.tensor([1.5, 1.5]), torch.tensor([0.75, 0.75]), torch.tensor([math.pi + 0.5, 0.0])]
+    l_task_k = [0.0005, 0.0005, 0.0005]
+    T_initial = [1.25, 1.5, 1.75]
 
-    for i in range(len(targets)-1):
+    for i in range(len(targets)):
         target = targets[i].reshape(2, 1).to(device)
         u0_init = u0_inits[i]
 
@@ -222,4 +223,4 @@ if __name__ == "__main__":
             os.mkdir(saving_dir)
             os.mkdir(os.path.join(saving_dir, "Figures"))
 
-        compute_opt_eigenmode(target, u0_init, training_epochs[i], saving_dir, l_task_k, T_initial[i])
+        compute_opt_eigenmode(target, u0_init, training_epochs[i], saving_dir, l_task_k[i], T_initial[i])

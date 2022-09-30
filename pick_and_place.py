@@ -29,9 +29,9 @@ print(device)
 # Define the parameters needed for the problem
 v_in = 2
 v_out = 2
-hdim = 100
+hdim = 256#100
 training_epochs = 500
-lr = 1e-3
+lr = 1e-3#3e-4#1e-3
 spatial_dim = 2
 opt_strategy = 1
 l_period_k = 1.0
@@ -116,12 +116,12 @@ def compute_opt_eigenmode(l_task_k, training_epochs, u0_init, saving_dir, target
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositionAtHalfPeriod(target),
                                     l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
                                     l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
-                                     spatial_dim=spatial_dim, lr=lr, u0_init=[-0.0, -0.0], u0_requires_grad=False) #u0_init = [-0.5, -0.5]
+                                     spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False) #u0_init = [-0.5, -0.5]
     else:
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToActualPositionAtHalfPeriod(target, l1, l2),
                                     l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
                                     l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
-                                    spatial_dim=spatial_dim, lr=lr, u0_init=[0.0, 0.0], u0_requires_grad=False)
+                                    spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False)
 
     logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
 
@@ -176,10 +176,10 @@ def compute_opt_eigenmode(l_task_k, training_epochs, u0_init, saving_dir, target
 
 if __name__ == "__main__":
 
-    task_loss_coeff = [0.0, 0.0001, 0.0005]
-    training_epochs = [600, 600, 600]
-    targets = torch.tensor([1.5, 1.5])#[torch.tensor([1.5, 1.5])], torch.tensor([0.75, 0.75]), torch.tensor([math.pi + 0.5, 0.0])]
-    u0_inits = [0.0, 0.0]#[[0.0, 0.0], [-0.5, -0.5], [math.pi - 0.5, 0.0]]
+    task_loss_coeff = [0.0005]#[0.0, 0.0001, 0.001]
+    training_epochs = [300]#$[300, 300, 300]
+    targets = torch.tensor([0.75, 0.75])#[torch.tensor([1.5, 1.5])], torch.tensor([0.75, 0.75]), torch.tensor([math.pi + 0.5, 0.0])]
+    u0_inits = [-0.5, -0.5]#[[0.0, 0.0], [-0.5, -0.5], [math.pi - 0.5, 0.0]]
 
     for i in range(len(task_loss_coeff)):
         target = targets.reshape(2, 1).to(device)
@@ -202,7 +202,7 @@ if __name__ == "__main__":
             os.mkdir(saving_dir)
             os.mkdir(os.path.join(saving_dir, "Figures"))
 
-        compute_opt_eigenmode(task_loss_coeff[i], training_epochs[i], u0_inits, saving_dir, target)
+        compute_opt_eigenmode(task_loss_coeff[i], training_epochs[i], u0_init, saving_dir, target)
 
 
 
