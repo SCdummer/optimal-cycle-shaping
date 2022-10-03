@@ -153,7 +153,7 @@ def compute_opt_eigenmode(l_task_k, training_epochs, u0_init, saving_dir, target
 
     vu = learn.model.f(torch.linspace(0, 1, num_points).cuda(), q.detach().cuda(), V_only=True).cuda().detach().cpu().numpy()
 
-    vu2 = learn.model.f(torch.linspace(0, 1, num_points).cuda(), angles.detach().cuda(),
+    vu2 = learn.model.f(torch.linspace(0, 1, num_points).cuda(), torch.tensor(xT[..., 0:2]).detach().cuda(),
                        V_only=True).cuda().detach().cpu().numpy()
     T = learn.model.f.T[0].item()
 

@@ -172,7 +172,7 @@ def compute_opt_eigenmode(target, u0_init, training_epochs, saving_dir, l_task_k
 
     vu = learn.model.f(torch.linspace(0, 1, num_points).cuda(), q.detach().cuda(), V_only=True).cuda().detach().cpu().numpy()
 
-    vu2 = learn.model.f(torch.linspace(0, 1, num_points).cuda(), angles.detach().cuda(),
+    vu2 = learn.model.f(torch.linspace(0, 1, num_points).cuda(), torch.tensor(xT[..., 0:2]).detach().cuda(),
                        V_only=True).cuda().detach().cpu().numpy()
     T = learn.model.f.T[0].item()
     plotting_dir = os.path.join(saving_dir, "Figures")
@@ -196,11 +196,25 @@ if __name__ == "__main__":
     if not os.path.isdir("Experiments"):
         os.mkdir("Experiments")
 
-    training_epochs = [600, 600, 600]
-    u0_inits = [[-0.5, -0.5], [-0.5, -0.5], [- 0.5, -0.5]]#[[0.0, 0.0], [-0.5, -0.5], [math.pi - 0.5, 0.0]]
-    targets = [torch.tensor([0.75, 0.75]), torch.tensor([0.75, 0.75]), torch.tensor([0.75, 0.75])]#[torch.tensor([1.5, 1.5]), torch.tensor([0.75, 0.75]), torch.tensor([math.pi + 0.5, 0.0])]
-    l_task_k = [0.0005, 0.0005, 0.0005]
-    T_initial = [1.25, 1.5, 1.75]
+    # training_epochs = [200, 600, 600, 600]
+    # u0_inits = [[0.0, 0.0], [0.0, 0.0], [math.pi - 0.5, 0.0], [math.pi - 0.5, 0.0]]
+    # targets = [torch.tensor([1.5, 1.5]), torch.tensor([1.5, 1.5]), torch.tensor([math.pi + 0.5, 0.0]), torch.tensor([math.pi + 0.5, 0.0])]
+    # l_task_k = [0.0001, 0.0, 0.0001, 0.0]
+    # T_initial = [3, 3, 1.25, 1.25]
+
+    # training_epochs = [600, 600]
+    # u0_inits = [[math.pi - 0.5, 0.0], [math.pi - 0.5, 0.0]]
+    # targets = [torch.tensor([math.pi + 0.5, 0.0]), torch.tensor([math.pi + 0.5, 0.0])]
+    # l_task_k = [0.0001, 0.0]
+    # T_initial = [1.2, 1.2]
+    # hdim=256
+
+    training_epochs = [20, 100]
+    u0_inits = [[0.0, 0.0], [0.0, 0.0]]
+    targets = [torch.tensor([1.5, 1.5]), torch.tensor([1.5, 1.5])]
+    l_task_k = [0.0001, 0.0]
+    T_initial = [3.0, 3.0]
+    hdim=256
 
     for i in range(len(targets)):
         target = targets[i].reshape(2, 1).to(device)
