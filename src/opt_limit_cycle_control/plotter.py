@@ -133,7 +133,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             # V gravity = m1gy1 + m2gy2
 
             y1m = -l1 * np.cos(q1)
-            y2m = y1m - l2 * np.cos(q2)
+            y2m = y1m - l2 * np.cos(q2 + q1)
             V_grav = m1*g*y1m + m2*g*y2m
 
             # compute targets x,y positions
@@ -159,6 +159,20 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             plt.savefig(os.path.join(plotting_dir,'DoublePendulumTrajectory' + str(c_eff_penalty) + '.png'))
             ax.clear()
 
+            p1 = ax.scatter(xT[:, 0], xT[:, 1] - xT[:, 0], c=np.linspace(0, 1, xT.shape[0], endpoint=False),
+                            cmap='twilight', s=10)
+            pt0 = ax.scatter(xT[0, 0], xT[0, 1], s=30, color="none", edgecolor="blue")
+            #pt0 = ax.scatter(x1[-1:], y1[-1:], s=30, color="none", edgecolor="blue")
+            #pt1 = ax.scatter(x2[-1:], y2[-1:], s=30, color="none", edgecolor="blue")
+            xlimits = (min(np.min(xT[:,0]) * 1.05, -np.pi), max(np.max(xT[:,0]) * 1.05, np.pi))
+            ylimits = (min(np.min(xT[:,1]-xT[:,0]) * 1.05, -np.pi), max(np.max(xT[:,1]-xT[:,0]) * 1.05 , np.pi))
+            ax.set_xlim(xlimits[0], xlimits[1])
+            ax.set_ylim(ylimits[0], ylimits[1])
+            # cbar = fig.colorbar(p2)
+            # cbar.set_label('time', rotation=90)
+            plt.savefig(os.path.join(plotting_dir,'DoublePendulumTrajectory_angles_over_time_' + str(c_eff_penalty) + '.png'))
+            ax.clear()
+
             c1 = plt.cm.twilight(np.linspace(0, 1, xT.shape[0], endpoint=False))
             c2 = plt.cm.twilight(np.linspace(0, 1, xT.shape[0], endpoint=False))
 
@@ -176,7 +190,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
                 pt1 = ax.scatter(x2[0], y2[0], s=30, color="none", edgecolor="blue")
                 pt2 = ax.scatter(xt2, yt2, c='r', s=30, marker='x')
                 p0 = ax.scatter(o[0], o[0], c='k', s=30, zorder=10)
-                results_dir = os.path.join(plotting_dir, 'Snapshots/')
+                results_dir = os.path.join(plotting_dir, 'Snapshots')
                 if not os.path.isdir(results_dir):
                     os.makedirs(results_dir)
                 plt.savefig(os.path.join(results_dir, 'DoublePendulumTrajectory_t='+str(i)+ '_' + str(c_eff_penalty) + '.png'))
@@ -193,7 +207,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             pt1 = ax.scatter(x2[0], y2[0], s=30, color="none", edgecolor="blue")
             pt2 = ax.scatter(xt2, yt2, c='r', s=30, marker='x')
             p0 = ax.scatter(o[0], o[0], c='k', s=30, zorder=10)
-            results_dir = os.path.join(plotting_dir, 'Snapshots/')
+            results_dir = os.path.join(plotting_dir, 'Snapshots')
             if not os.path.isdir(results_dir):
                 os.makedirs(results_dir)
             plt.savefig(
@@ -307,6 +321,32 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             fig4.tight_layout()
             plt.savefig(
                 os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q2_plot' + str(c_eff_penalty) + '.png'))
+            ax4.clear()
+
+            # q1 against time
+            t = np.linspace(0, 1 * T, xT.shape[0])
+            fig4 = plt.figure()
+            ax4 = plt.axes()
+            c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
+            plt.plot(t, xT[:, 0], c='tab:blue', linewidth=3)
+            ax4.legend()
+            ax4.set_title('q1 over Period T={:.3f}'.format(T))
+            fig4.tight_layout()
+            plt.savefig(
+                os.path.join(plotting_dir, 'DoublePendulumLearned_q1_against_time_plot' + str(c_eff_penalty) + '.png'))
+            ax4.clear()
+
+            # q2 against time
+            t = np.linspace(0, 1 * T, xT.shape[0])
+            fig4 = plt.figure()
+            ax4 = plt.axes()
+            c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
+            plt.plot(t, xT[:, 1] - xT[:, 0], c='tab:orange', linewidth=3)
+            ax4.legend()
+            ax4.set_title('q2 over Period T={:.3f}'.format(T))
+            fig4.tight_layout()
+            plt.savefig(
+                os.path.join(plotting_dir, 'DoublePendulumLearned_q2_against_time_plot' + str(c_eff_penalty) + '.png'))
             ax4.clear()
 
             t = np.linspace(0, 1 * T, u2.shape[0])
