@@ -239,3 +239,14 @@ def cuberoot(coeff):
     else:
         r = -d/c;
     return r
+
+def traj_to_qp(xT):
+    xT = torch.tensor(xT)
+    n = xT.size(0)
+    Q,P = [],[]
+    for i in range(n):
+        q = xT[i,:2].unsqueeze(0)
+        p = xT[i,:2].unsqueeze(0)
+        Q += [q]
+        P += [p]
+    return Q,P
