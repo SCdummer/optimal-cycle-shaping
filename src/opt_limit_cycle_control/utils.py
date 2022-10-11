@@ -246,7 +246,7 @@ def traj_to_qp(xT):
     Q,P = [],[]
     for i in range(n):
         q = xT[i,:2].unsqueeze(0)
-        p = xT[i,:2].unsqueeze(0)
+        p = xT[i,2:].unsqueeze(0)
         Q += [q]
         P += [p]
     return Q,P

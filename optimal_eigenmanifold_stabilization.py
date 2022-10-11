@@ -150,8 +150,6 @@ if not pendulum:
 # Train the Energy shaping controller. If you specify times, use CloseToPositionsAtTime and else use CloseToPositions
 # as task loss
 
-#TODO: load state_dict
-
 if times is None:
     learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositions(target),
                                   l_period=l_period_k,
@@ -188,12 +186,21 @@ with torch.no_grad():
     xT_ctrl = odeint(learn.model.f.to(device), torch.cat([learn.u0, torch.zeros(learn.u0.size()).to(device)], dim=1).to(device),
             torch.linspace(0, 1, num_points).to(device), method='midpoint').squeeze(1).cpu().detach().numpy()
 
+
+
+
 # Check energy:
 Q,P = traj_to_qp(xT_ctrl)
 n = len(Q)
-E = torch.zeros(n)
+E,AutE,Pot,Kin = torch.zeros(n),torch.zeros(n),torch.zeros(n),torch.zeros(n)
+
 for i in range(n):
     E[i] = learn.model.f._energy(Q[i].to(device),P[i].to(device))
-plt.plot(AllTime.detach().cpu().numpy(),E.detach().cpu().numpy())
+    AutE[i] = learn.model.f._autonomous_energy(Q[i].to(device),P[i].to(device))
+    Pot[i] = learn.model.f._autonomous_potential(Q[i].to(device))
+    Kin[i] = learn.model.f._autonomous_kinetic(Q[i].to(device),P[i].to(device))
+AllTime = AllTime.detach().cpu().numpy();
+handles = plt.plot(AllTime,E.detach().cpu().numpy(),AllTime,AutE.detach().cpu().numpy(),AllTime,Pot.detach().cpu().numpy(),AllTime,Kin.detach().cpu().numpy())
+plt.legend(handles,('Total Energy','Autonomous Energy', 'Autonomous Potential','Kinetic Energy'))
 plt.ylabel('Total Energy')
 plt.xlabel('Time')
