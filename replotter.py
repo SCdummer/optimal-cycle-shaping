@@ -59,20 +59,21 @@ if __name__ == "__main__":
     target = torch.tensor([1.5, 1.5])
 
     T_requires_grad = False
-    T_initial = 1.75
+    T_initial = 3.0
 
     # Give the main directory name in which you save the different kind of experiments
     main_dir = "Experiments to use in paper"
 
     # Give the folder name
     #folder_name = os.path.join("Experiments to use in paper", "Two decent experiments", "30-09-2022_14h-36m-49s")
-    folder_name = os.path.join("30-09-2022_15h-37m-18s")
+    folder_name = os.path.join("30-09-2022_17h-13m-25s")
     #folder_name = "03-10-2022_20h-01m-43s"
-
-    ### Finished specifying things yourself ###
 
     # Indicate if you use the 'no_reg' file or not
     use_no_reg_file = True
+
+    ### Finished specifying things yourself ###
+
     if use_no_reg_file:
         string_to_add = '_no_reg'
     else:

@@ -100,7 +100,7 @@ def compute_opt_eigenmode(l_task_k, training_epochs, u0_init, saving_dir, target
         "alpha_p": alpha_p,
         "alpha_s": alpha_s,
         "alpha_mv": alpha_mv,
-        "l_task_k": 0.0,
+        "l_task_k": l_task_k,
         "l_task_2_k": l_task_2_k,
         "l1": l1,
         "l2": l2,
@@ -108,7 +108,8 @@ def compute_opt_eigenmode(l_task_k, training_epochs, u0_init, saving_dir, target
         "u0_init": tuple(u0_init),
         "u0_requires_grad": False,
         "target": (target[0].item(), target[1].item()),
-        "training_epochs": training_epochs
+        "training_epochs": training_epochs,
+        "T_initial": 'not provided'
     }
 
     # Train the Energy shaping controller.

@@ -143,9 +143,9 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             yt2 = yt1 - l2 * np.cos(target[:, 1])
 
 
-            p1 = ax.scatter(x1, y1, c=np.linspace(0, 1, xT.shape[0], endpoint=False),
+            p1 = ax.scatter(x1, y1, c=np.linspace(0, T, xT.shape[0], endpoint=True),
                             cmap='twilight', s=10)
-            p2 = ax.scatter(x2, y2, c=np.linspace(0, 1, xT.shape[0], endpoint=False),
+            p2 = ax.scatter(x2, y2, c=np.linspace(0, T, xT.shape[0], endpoint=True),
                             cmap='twilight', s=10)
             pt0 = ax.scatter(x1[0], y1[0], s=30, color="none", edgecolor="blue")
             pt1 = ax.scatter(x2[0], y2[0], s=30, color="none", edgecolor="blue")
@@ -154,12 +154,14 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             pt2 = ax.scatter(xt2, yt2, c='r', s=30, marker='x')
             ax.set_xlim(-2.5, 2.5)
             ax.set_ylim(-2.5, 2.5)
+            plt.xlabel('x')
+            plt.ylabel('y')
             cbar = fig.colorbar(p2)
             cbar.set_label('time', rotation=90)
             plt.savefig(os.path.join(plotting_dir,'DoublePendulumTrajectory' + str(c_eff_penalty) + '.png'))
             ax.clear()
 
-            p1 = ax.scatter(xT[:, 0], xT[:, 1] - xT[:, 0], c=np.linspace(0, 1, xT.shape[0], endpoint=False),
+            p1 = ax.scatter(xT[:, 0], xT[:, 1] - xT[:, 0], c=np.linspace(0, T, xT.shape[0], endpoint=True),
                             cmap='twilight', s=10)
             pt0 = ax.scatter(xT[0, 0], xT[0, 1], s=30, color="none", edgecolor="blue")
             #pt0 = ax.scatter(x1[-1:], y1[-1:], s=30, color="none", edgecolor="blue")
@@ -168,13 +170,15 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             ylimits = (min(np.min(xT[:,1]-xT[:,0]) * 1.05, -np.pi), max(np.max(xT[:,1]-xT[:,0]) * 1.05 , np.pi))
             ax.set_xlim(xlimits[0], xlimits[1])
             ax.set_ylim(ylimits[0], ylimits[1])
+            plt.xlabel(r'$q_1$')
+            plt.ylabel(r'$q_2$')
             # cbar = fig.colorbar(p2)
             # cbar.set_label('time', rotation=90)
             plt.savefig(os.path.join(plotting_dir,'DoublePendulumTrajectory_angles_over_time_' + str(c_eff_penalty) + '.png'))
             ax.clear()
 
-            c1 = plt.cm.twilight(np.linspace(0, 1, xT.shape[0], endpoint=False))
-            c2 = plt.cm.twilight(np.linspace(0, 1, xT.shape[0], endpoint=False))
+            c1 = plt.cm.twilight(np.linspace(0, 1, xT.shape[0], endpoint=True))
+            c2 = plt.cm.twilight(np.linspace(0, 1, xT.shape[0], endpoint=True))
 
             # plot snapshots
             for i in range(0, x2.shape[0], 10):
@@ -185,11 +189,13 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
                 l2 = ax.plot((x2[i], x1[i]), (y2[i], y1[i]), color=c2[i])
                 p1 = ax.scatter(x1[0:i], y1[0:i], color=c1[0:i], s=10)
                 p2 = ax.scatter(x2[0:i], y2[0:i], color=c2[0:i], s=10)
-
                 pt0 = ax.scatter(x1[0], y1[0], s=30, color="none", edgecolor="blue")
                 pt1 = ax.scatter(x2[0], y2[0], s=30, color="none", edgecolor="blue")
                 pt2 = ax.scatter(xt2, yt2, c='r', s=30, marker='x')
                 p0 = ax.scatter(o[0], o[0], c='k', s=30, zorder=10)
+                plt.xlabel('x')
+                plt.ylabel('y')
+
                 results_dir = os.path.join(plotting_dir, 'Snapshots')
                 if not os.path.isdir(results_dir):
                     os.makedirs(results_dir)
@@ -207,6 +213,8 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             pt1 = ax.scatter(x2[0], y2[0], s=30, color="none", edgecolor="blue")
             pt2 = ax.scatter(xt2, yt2, c='r', s=30, marker='x')
             p0 = ax.scatter(o[0], o[0], c='k', s=30, zorder=10)
+            plt.xlabel('x')
+            plt.ylabel('y')
             results_dir = os.path.join(plotting_dir, 'Snapshots')
             if not os.path.isdir(results_dir):
                 os.makedirs(results_dir)
@@ -230,6 +238,8 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
                 #pt1 = ax.scatter(x2[-1:], y2[-1:], s=30, color="none", edgecolor="blue")
                 pt2 = ax.scatter(xt2, yt2, c='r', s=30, marker='x')
                 p0 = ax.scatter(o[0], o[0], c='k', s=30, zorder=10)
+                plt.xlabel('x')
+                plt.ylabel('y')
                 return p1, p2
 
             gif = FuncAnimation(fig, animate, fargs=(x1, x2, y1, y2, o, c1, c2, xt1, yt1, xt2, yt2),
@@ -244,7 +254,9 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             p6 = ax4.scatter(q1, q2, c=V, cmap='magma', label=r'$V_{\theta}$')
             ax4.legend()
             fig4.colorbar(p6)
-            ax4.set_title('Learned Potential (T={:.3f})'.format(T))
+            #ax4.set_title('Learned Potential (T={:.3f})'.format(T))
+            plt.xlabel(r'$q_1$')
+            plt.ylabel(r'$q_2$')
             plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_Potential' + str(c_eff_penalty) + '.png'))
             ax4.clear()
 
@@ -254,7 +266,9 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             p6 = ax4.scatter(q1, q2, c=V_grav, cmap='magma', label=r'$V_{gravity}$')
             ax4.legend()
             cbar = fig4.colorbar(p6)
-            ax4.set_title('Learned Potential (T={:.3f})'.format(T))
+            #ax4.set_title('Learned Potential (T={:.3f})'.format(T))
+            plt.xlabel(r'$q_1$')
+            plt.ylabel(r'$q_2$')
             plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_GravityPotential' + str(c_eff_penalty) + '.png'))
             ax4.clear()
 
@@ -264,7 +278,9 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             p6 = ax4.scatter(q1, q2, c=V+V_grav, cmap='magma', label=r'$V_{\theta} + V_{gravity}$')
             ax4.legend()
             fig4.colorbar(p6)
-            ax4.set_title('Learned Potential (T={:.3f})'.format(T))
+            #ax4.set_title('Learned Potential (T={:.3f})'.format(T))
+            plt.xlabel(r'$q_1$')
+            plt.ylabel(r'$q_2$')
             plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_OverallPotential' + str(c_eff_penalty) + '.png'))
             ax4.clear()
 
@@ -273,11 +289,13 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             fig4 = plt.figure()
             ax4 = plt.axes()
             c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
-            p7 = ax4.scatter(t, u2[:, 0], c=t, cmap='twilight', s=5, label=r'$u_1=\nabla_{q_1}V_{\theta}$')
+            p7 = ax4.scatter(t, u2[:, 0], c=t, cmap='twilight', s=5, label=r'$u_1(t)=(\nabla_{q_1}V_{\theta})(q(t))$')
             ax4.legend()
             cbar = fig4.colorbar(p7)
             cbar.set_label('time', rotation=90)
-            ax4.set_title('Gradient of Learned Potential over Period T={:.3f}'.format(T))
+            #ax4.set_title('Gradient of Learned Potential over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$u_1$')
             fig4.tight_layout()
             plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_GradPotential_q1_' + str(c_eff_penalty) + '.png'))
             ax4.clear()
@@ -287,9 +305,11 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             fig4 = plt.figure()
             ax4 = plt.axes()
             c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
-            plt.plot(t, u2[:, 0], c='tab:blue', label=r'$u_1=\nabla_{q_1}V_{\theta}$', linewidth=3)
+            plt.plot(t, u2[:, 0], c='tab:blue', label=r'$u_1(t)=(\nabla_{q_1}V_{\theta})(q(t))$', linewidth=3)
             ax4.legend()
-            ax4.set_title('Gradient of Learned Potential over Period T={:.3f}'.format(T))
+            #ax4.set_title('Gradient of Learned Potential over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$u_1$')
             fig4.tight_layout()
             plt.savefig(
                 os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q1_plot' + str(c_eff_penalty) + '.png'))
@@ -300,11 +320,13 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             fig4 = plt.figure()
             ax4 = plt.axes()
             c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
-            p7 = ax4.scatter(t, u2[:, 1], c=t, cmap='twilight', s=5, label=r'$u_2=\nabla_{q_2}V_{\theta}$')
+            p7 = ax4.scatter(t, u2[:, 1], c=t, cmap='twilight', s=5, label=r'$u_2(t)=(\nabla_{q_2}V_{\theta})(q(t))$')
             ax4.legend()
             cbar = fig4.colorbar(p7)
             cbar.set_label('time', rotation=90)
-            ax4.set_title('Gradient of Learned Potential over Period T={:.3f}'.format(T))
+            #ax4.set_title('Gradient of Learned Potential over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$u_2$')
             fig4.tight_layout()
             plt.savefig(
                 os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q2_' + str(c_eff_penalty) + '.png'))
@@ -315,9 +337,11 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             fig4 = plt.figure()
             ax4 = plt.axes()
             c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
-            plt.plot(t, u2[:, 1], c='tab:orange', label=r'$u_2=\nabla_{q_2}V_{\theta}$', linewidth=3)
+            plt.plot(t, u2[:, 1], c='tab:orange', label=r'$u_2(t)=(\nabla_{q_2}V_{\theta})(q(t))$', linewidth=3)
             ax4.legend()
-            ax4.set_title('Gradient of Learned Potential over Period T={:.3f}'.format(T))
+            #ax4.set_title('Gradient of Learned Potential over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$u_2$')
             fig4.tight_layout()
             plt.savefig(
                 os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q2_plot' + str(c_eff_penalty) + '.png'))
@@ -330,7 +354,9 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
             plt.plot(t, xT[:, 0], c='tab:blue', linewidth=3)
             ax4.legend()
-            ax4.set_title('q1 over Period T={:.3f}'.format(T))
+            #ax4.set_title('q1 over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$q_1$')
             fig4.tight_layout()
             plt.savefig(
                 os.path.join(plotting_dir, 'DoublePendulumLearned_q1_against_time_plot' + str(c_eff_penalty) + '.png'))
@@ -343,7 +369,9 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
             plt.plot(t, xT[:, 1] - xT[:, 0], c='tab:orange', linewidth=3)
             ax4.legend()
-            ax4.set_title('q2 over Period T={:.3f}'.format(T))
+            #ax4.set_title('q2 over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$q_2$')
             fig4.tight_layout()
             plt.savefig(
                 os.path.join(plotting_dir, 'DoublePendulumLearned_q2_against_time_plot' + str(c_eff_penalty) + '.png'))
@@ -357,7 +385,9 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             ax4.legend()
             cbar = fig4.colorbar(p5)
             cbar.set_label('time', rotation=90)
-            ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            #ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$||u_1||^2$')
             fig4.tight_layout()
             plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_SquaredControlEffort_u1_' + str(c_eff_penalty) + '.png'))
             ax4.clear()
@@ -368,7 +398,9 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
             plt.plot(t, np.square(u2[:, 0]), c='tab:blue', label="$||u_1||^2$", linewidth=3)
             ax4.legend()
-            ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            #ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$||u_1||^2$')
             fig4.tight_layout()
             plt.savefig(os.path.join(plotting_dir,
                                      'DoublePendulumLearned_SquaredControlEffort_u1_plot' + str(c_eff_penalty) + '.png'))
@@ -382,7 +414,9 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             ax4.legend()
             cbar = fig4.colorbar(p6)
             cbar.set_label('time', rotation=90)
-            ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            #ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$||u_2||^2$')
             fig4.tight_layout()
             plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_SquaredControlEffort_u2_' + str(c_eff_penalty) + '.png'))
             ax4.clear()
@@ -393,7 +427,9 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
             plt.plot(t, np.square(u2[:, 1]), c='tab:orange', label="$||u_2||^2$")
             ax4.legend()
-            ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            #ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$||u_2||^2$')
             fig4.tight_layout()
             plt.savefig(os.path.join(plotting_dir,
                                      'DoublePendulumLearned_SquaredControlEffort_u2_plot' + str(
@@ -404,13 +440,15 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             fig4 = plt.figure()
             ax4 = plt.axes()
             c3 = plt.cm.viridis(np.linspace(0, 1, target.size(0), endpoint=False))
-            p6 = ax4.scatter(t, np.square(u2[:, 0]), s=1, label="$||u_2||^2$", linewidth=3)
+            p6 = ax4.scatter(t, np.square(u2[:, 0]), s=1, label="$||u_1||^2$", linewidth=3)
             p6 = ax4.scatter(t, np.square(u2[:, 1]), s=1, label="$||u_2||^2$", linewidth=3)
             p7 = ax4.scatter(t, np.square(u2[:, 0]) + np.square(u2[:, 1]), c=t, cmap='twilight', s=5, label="$||u_1||^2 + ||u_2||^2$", linewidth=3)
             ax4.legend()
             cbar = fig4.colorbar(p7)
             cbar.set_label('time', rotation=90)
-            ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            #ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$||u||^2$')
             fig4.tight_layout()
             plt.savefig(os.path.join(plotting_dir,'DoublePendulumLearned_SquaredControlEffort_u1u2_' + str(c_eff_penalty) + '.png'))
             ax4.clear()
@@ -424,7 +462,9 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, plot3
             plt.plot(t, np.square(u2[:, 0]) + np.square(u2[:, 1]), c='tab:green', label="$||u_1||^2 + ||u_2||^2$", linewidth=3)
             ax4.legend()
             #ax4.set_ylim(-1000, 30000)
-            ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            #ax4.set_title('Control Input (squared) over Period T={:.3f}'.format(T))
+            plt.xlabel('t')
+            plt.ylabel(r'$||u||^2$')
             fig4.tight_layout()
             plt.savefig(os.path.join(plotting_dir,
                                      'DoublePendulumLearned_SquaredControlEffort_u1u2_plot' + str(
