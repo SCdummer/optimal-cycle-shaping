@@ -179,7 +179,7 @@ def compute_opt_eigenmode(target, u0_init, training_epochs, saving_dir, l_task_k
     plotting_dir = os.path.join(saving_dir, "Figures")
     plot_trajectories(xT=xT, target=target.reshape(1, -1).cpu(), V=vu[:, 0].reshape(num_data*num_data, 1),
                       angles=angles.numpy().reshape(num_points, v_in), u=vu[:, -v_in:].reshape(num_data*num_data, v_in),
-                      l1=1, l2=1, pendulum=False, plot3D=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(),
+                      l1=1, l2=1, pendulum=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(),
                       q2=q2.cpu().numpy(), u2=vu2[:, -v_in:].reshape(num_points, v_in), plotting_dir=plotting_dir)
     print("Created and saved the plots")
 
@@ -197,29 +197,33 @@ if __name__ == "__main__":
     if not os.path.isdir("Experiments"):
         os.mkdir("Experiments")
 
-    # training_epochs = [200, 600, 600, 600]
-    # u0_inits = [[0.0, 0.0], [0.0, 0.0], [math.pi - 0.5, 0.0], [math.pi - 0.5, 0.0]]
-    # targets = [torch.tensor([1.5, 1.5]), torch.tensor([1.5, 1.5]), torch.tensor([math.pi + 0.5, 0.0]), torch.tensor([math.pi + 0.5, 0.0])]
-    # l_task_k = [0.0001, 0.0, 0.0001, 0.0]
-    # T_initial = [3, 3, 1.25, 1.25]
+    configuration = 2
 
-    # training_epochs = [600, 600]
-    # u0_inits = [[math.pi - 0.5, 0.0], [math.pi - 0.5, 0.0]]
-    # targets = [torch.tensor([math.pi + 0.5, 0.0]), torch.tensor([math.pi + 0.5, 0.0])]
-    # l_task_k = [0.0001, 0.0]
-    # T_initial = [1.2, 1.2]
-    # hdim=256
+    if configuration == 1:
+        targets = torch.tensor([1.5, 1.5])
+        u0_init = [0.0, 0.0]
 
-    training_epochs = [20, 100]
-    u0_inits = [[0.0, 0.0], [0.0, 0.0]]
-    targets = [torch.tensor([1.5, 1.5]), torch.tensor([1.5, 1.5])]
-    l_task_k = [0.0001, 0.0]
-    T_initial = [3.0, 3.0]
-    hdim=256
+        ### add other hyperparameters ###
 
-    for i in range(len(targets)):
-        target = targets[i].reshape(2, 1).to(device)
-        u0_init = u0_inits[i]
+    if configuration == 2:
+        target = torch.tensor([0.75, 0.75])
+        u0_init = [-0.5, -0.5]
+
+        training_epochs = [100, 100, 100, 100, 100, 100]
+
+        l_task_k = [0.0, 0.1, 0.01, 0.001, 0.0001, 0.00001]
+        T_initial = [1.5, 1.5, 1.5, 1.5, 1.5, 1.5]
+        hdim = 256
+
+    if configuration == 3:
+        target = torch.tensor([math.pi + 0.5, 0.0])
+        u0_init = [math.pi - 0.5, 0.0]
+
+        ### add other hyperparameters ###
+
+
+    for i in range(len(training_epochs)):
+        target = target.reshape(2, 1).to(device)
 
         # Get the date and time the experiment started
         now = datetime.now()

@@ -145,13 +145,18 @@ class ControlledSystemDoublePendulum(nn.Module):
         V = self.V(q)
         return V
 
-    def _autonomous_energy(self, x):
+    def _autonomous_energy(self, q, p):
         # Hamiltonian (total energy) of the UNCONTROLLED system
-        pass
+        q1 = q[:,0].unsqueeze(-1)
+        q2 = q[:,1].unsqueeze(-1)
+        Grav_Pot = -g*(torch.cos(q1 + q2)*l2*m2 + torch.cos(q1)*l1*(m1 + m2))
+        Spring_pot = k1*(1/2*torch.pi - q1)**2
+        Kin_E = 1/2*torch.inner(p.squeeze(),self._inv_mass_tensor(q)@p.squeeze())
+        return Grav_Pot + Kin_E + Spring_pot, Grav_Pot, Kin_E, Spring_pot
 
-    def _energy(self, x):
+    def _energy(self, q, p):
         # Hamiltonian (total energy) of the CONTROLLED system
-        pass
+        return self._autonomous_energy(q,p)+self._potential_shaping(q).sum()
 
 
 class AugmentedDynamicsDoublePendulum(nn.Module):
