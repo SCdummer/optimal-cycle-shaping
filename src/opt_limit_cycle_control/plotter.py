@@ -284,7 +284,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, c_eff
     plt.xlabel(r'$q_1$')
     plt.ylabel(r'$u_1$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q1_plot' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q1_traj_plot' + str(c_eff_penalty) + '.png'))
     ax4.clear()
 
     # grad potential wrt trajectory
@@ -298,7 +298,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, c_eff
     plt.xlabel(r'$q_2$')
     plt.ylabel(r'$u_2$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q2_plot' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q2_traj_plot' + str(c_eff_penalty) + '.png'))
     ax4.clear()
 
     # q1 against time
