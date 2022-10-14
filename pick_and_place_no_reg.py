@@ -197,13 +197,17 @@ if __name__ == "__main__":
     if not os.path.isdir("Experiments"):
         os.mkdir("Experiments")
 
-    configuration = 2
+    configuration = 1
 
     if configuration == 1:
-        targets = torch.tensor([1.5, 1.5])
+        target = torch.tensor([1.5, 1.5])
         u0_init = [0.0, 0.0]
 
-        ### add other hyperparameters ###
+        training_epochs = [2, 200, 200, 200]
+
+        l_task_k = [0.0, 0.0001, 0.0, 0.0001]
+        T_initial = [1.75, 1.75, 2.5, 2.5]
+        hdim = 256
 
     if configuration == 2:
         target = torch.tensor([0.75, 0.75])

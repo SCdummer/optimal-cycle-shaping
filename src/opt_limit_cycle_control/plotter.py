@@ -95,7 +95,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, c_eff
         results_dir = os.path.join(plotting_dir, 'Snapshots')
         if not os.path.isdir(results_dir):
             os.makedirs(results_dir)
-            plt.savefig(os.path.join(results_dir, 'DoublePendulumTrajectory_t='+str(i)+ '_' + str(c_eff_penalty) + '.png'))
+        plt.savefig(os.path.join(results_dir, 'DoublePendulumTrajectory_t='+str(i)+ '_' + str(c_eff_penalty) + '.png'))
     i = 999
     ax.clear()
     ax.set_xlim(-2.5, 2.5)
