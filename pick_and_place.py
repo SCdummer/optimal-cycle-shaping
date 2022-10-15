@@ -117,12 +117,14 @@ def compute_opt_eigenmode(l_task_k, training_epochs, u0_init, saving_dir, target
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositionAtHalfPeriod(target),
                                     l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
                                     l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
-                                     spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False) #u0_init = [-0.5, -0.5]
+                                     spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
+                                    training_epochs=training_epochs)
     else:
         learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToActualPositionAtHalfPeriod(target, l1, l2),
                                     l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
                                     l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
-                                    spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False)
+                                    spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
+                                    training_epochs=training_epochs)
 
     logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
 
@@ -161,7 +163,7 @@ def compute_opt_eigenmode(l_task_k, training_epochs, u0_init, saving_dir, target
     plotting_dir = os.path.join(saving_dir, "Figures")
     plot_trajectories(xT=xT, target=target.reshape(1, -1).cpu(), V=vu[:, 0].reshape(num_data*num_data, 1),
                       angles=angles.numpy().reshape(num_points, v_in), u=vu[:, -v_in:].reshape(num_data*num_data, v_in),
-                      l1=1, l2=1, pendulum=False, plot3D=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(),
+                      l1=1, l2=1, pendulum=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(),
                       q2=q2.cpu().numpy(), u2=vu2[:, -v_in:].reshape(num_points, v_in), plotting_dir=plotting_dir)
 
     print("Created and saved the plots")
@@ -177,14 +179,14 @@ def compute_opt_eigenmode(l_task_k, training_epochs, u0_init, saving_dir, target
 
 if __name__ == "__main__":
 
-    task_loss_coeff = [0.0005]#[0.0, 0.0001, 0.001]
-    training_epochs = [300]#$[300, 300, 300]
-    targets = torch.tensor([0.75, 0.75])#[torch.tensor([1.5, 1.5])], torch.tensor([0.75, 0.75]), torch.tensor([math.pi + 0.5, 0.0])]
-    u0_inits = [-0.5, -0.5]#[[0.0, 0.0], [-0.5, -0.5], [math.pi - 0.5, 0.0]]
+    task_loss_coeff = [0.0001, 0.0001]#[0.0, 0.0001, 0.001]
+    training_epochs = [200, 200]#$[300, 300, 300]
+    targets = [torch.tensor([1.5, 1.5]), torch.tensor([0.75, 0.75])]#[torch.tensor([1.5, 1.5])], torch.tensor([0.75, 0.75]), torch.tensor([math.pi + 0.5, 0.0])]
+    u0_inits = [[0.0, 0.0], [-0.5, -0.5]]
 
     for i in range(len(task_loss_coeff)):
-        target = targets.reshape(2, 1).to(device)
-        u0_init = u0_inits
+        target = targets[i].reshape(2, 1).to(device)
+        u0_init = u0_inits[i]
 
         # Get the date and time the experiment started
         now = datetime.now()
@@ -194,6 +196,9 @@ if __name__ == "__main__":
         main_dir = os.path.join("Experiments_LearnableT", "DoublePendulum_{}_{}_to_{}_{}".format(u0_init[0], u0_init[1],
                                                                                                target[0].item(),
                                                                                                target[1].item()))
+
+        if not os.path.isdir("Experiments_LearnableT"):
+            os.mkdir("Experiments_LearnableT")
 
         if not os.path.isdir(main_dir):
             os.mkdir(main_dir)

@@ -37,8 +37,8 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, c_eff
     yt2 = yt1 - l2 * np.cos(target[:, 1])
 
     # spring potential
-    k1 = 0.5
-    V_spring = k1 * (1 / 2 * np.pi - q1) ** 2
+    k2 = 0.5
+    V_spring = k2 * (1 / 2 * np.pi - q2) ** 2
 
 
     p1 = ax.scatter(x1, y1, c=np.linspace(0, T, xT.shape[0], endpoint=True), cmap='twilight', s=10)

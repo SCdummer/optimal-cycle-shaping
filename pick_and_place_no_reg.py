@@ -203,10 +203,10 @@ if __name__ == "__main__":
         target = torch.tensor([1.5, 1.5])
         u0_init = [0.0, 0.0]
 
-        training_epochs = [2, 200, 200, 200]
+        training_epochs = [500, 500, 500, 500, 500, 500]
 
-        l_task_k = [0.0, 0.0001, 0.0, 0.0001]
-        T_initial = [1.75, 1.75, 2.5, 2.5]
+        l_task_k = [0.0, 0.0001, 0.0, 0.0001, 0.0, 0.0001]
+        T_initial = [1.75, 1.75, 2.5, 2.5, 3.0, 3.0]
         hdim = 256
 
     if configuration == 2:
