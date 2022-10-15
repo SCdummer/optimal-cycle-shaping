@@ -45,7 +45,7 @@ def creating_plots(model, u0, saving_dir, target, v_in, l_task_k):
     plot_trajectories(xT=xT, target=target.reshape(1, -1).cpu(), V=vu[:, 0].reshape(num_data * num_data, 1),
                       angles=angles.numpy().reshape(num_points, v_in),
                       u=vu[:, -v_in:].reshape(num_data * num_data, v_in),
-                      l1=1, l2=1, pendulum=False, plot3D=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(),
+                      l1=1, l2=1, pendulum=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(),
                       q2=q2.cpu().numpy(), u2=vu2[:, -v_in:].reshape(num_points, v_in), plotting_dir=plotting_dir)
     print("Created and saved the plots")
 
@@ -55,22 +55,22 @@ if __name__ == "__main__":
     ### Things to specify yourself ###
 
     # Specify the initial point and the target
-    u0_init = [0.0, 0.0]
-    target = torch.tensor([1.5, 1.5])
+    u0_init = [-0.5, -0.5]
+    target = torch.tensor([0.75, 0.75])
 
-    T_requires_grad = False
+    T_requires_grad = True
     T_initial = 3.0
 
     # Give the main directory name in which you save the different kind of experiments
-    main_dir = "Experiments to use in paper"
+    main_dir = "Experiments_LearnableT"
 
     # Give the folder name
     #folder_name = os.path.join("Experiments to use in paper", "Two decent experiments", "30-09-2022_14h-36m-49s")
-    folder_name = os.path.join("30-09-2022_17h-13m-25s")
+    folder_name = os.path.join("15-10-2022_12h-10m-02s")
     #folder_name = "03-10-2022_20h-01m-43s"
 
     # Indicate if you use the 'no_reg' file or not
-    use_no_reg_file = True
+    use_no_reg_file = False
 
     ### Finished specifying things yourself ###
 
@@ -104,8 +104,13 @@ if __name__ == "__main__":
         nn.Tanh(),
         nn.Linear(hdim, 1))
 
+    if T_initial == 'not provided':
+        T_init = 1.0
+    else:
+        T_init = T_initial
+
     # Creating the model
-    f = ControlledSystemDoublePendulum(V, T_initial=T_initial, T_requires_grad=T_requires_grad).to(device)
+    f = ControlledSystemDoublePendulum(V, T_initial=T_init, T_requires_grad=T_requires_grad).to(device)
     aug_f = AugmentedDynamicsDoublePendulum(f, ControlEffort(f))
 
     # Creating the final model

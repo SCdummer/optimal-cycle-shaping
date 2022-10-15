@@ -59,7 +59,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, pendulum=True, c_eff
 
     p1 = ax.scatter(xT[:, 0], xT[:, 1] - xT[:, 0], c=np.linspace(0, T, xT.shape[0], endpoint=True),
                             cmap='twilight', s=10)
-    pt0 = ax.scatter(xT[0, 0], xT[0, 1], s=30, color="none", edgecolor="blue")
+    pt0 = ax.scatter(xT[0, 0], xT[0, 1] - xT[0, 0], s=30, color="none", edgecolor="blue")
     #pt0 = ax.scatter(x1[-1:], y1[-1:], s=30, color="none", edgecolor="blue")
     #pt1 = ax.scatter(x2[-1:], y2[-1:], s=30, color="none", edgecolor="blue")
     xlimits = (min(np.min(xT[:,0]) * 1.05, -np.pi), max(np.max(xT[:,0]) * 1.05, np.pi))
