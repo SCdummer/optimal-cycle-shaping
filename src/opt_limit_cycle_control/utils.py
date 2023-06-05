@@ -212,13 +212,21 @@ def numJ(f,x,dx):
         dfdx[:,i] = (f(x+dx*I[:,i]) - f(x-dx*I[:,i]))/(2*dx)
     return dfdx
 
+def numJ2(f,x,dx):
+    "Numerical Jacobian Matrix using center difference"
+    nx, nf = x.squeeze().size(0), f(x).size(-1)#f(x).squeeze().size(-1)
+    I, dfdx = torch.eye(nx).to(x), torch.zeros((nf,nx)).to(x)
+    for i in range(nx):
+        dfdx[:,i] = (f(x+dx*I[:,i]) - f(x-dx*I[:,i]))/(2*dx)
+    return dfdx
+
 def find_orbit(f,x,dx,n=5):
     # try n newton iterations to find fixed point x_ = f(x_)
-    x_ = x
+    x_ = 2*x/2
     for i in range(n):
         df_ = f(x_)-x_
         dfdx = numJ(f,x,dx)
-        x_ = x - torch.inv(dfdx)@df_
+        x_ = x - torch.inverse(dfdx)@df_
     df_, df = f(x_)-x_, f(x)-x
     choice = torch.where(torch.norm(df_)-torch.norm(df)<0,1,0)
     return choice*x_ + torch.abs((choice-1))*x
