@@ -30,6 +30,19 @@ class DummyDataModule(LightningDataModule):
         return dummy
 
 
+def dummy_trainloader():
+    # dummy trainloader for Lightning learner
+    dummy = data.DataLoader(
+        data.TensorDataset(
+            torch.Tensor(1, 1),
+            torch.Tensor(1, 1)
+        ),
+        batch_size=1,
+        shuffle=False
+    )
+    return dummy
+
+
 def log_likelihood_loss(x, target):
     # negative log likelihood loss
     return -torch.mean(target.log_prob(x))
@@ -141,7 +154,7 @@ def load_eig_mode_double_pendulum(n, k, i):
                 - column 3: dq1/dt
                 - column 4: dq2/dt
                 Here t_points again corresponds to the number of time points at which we sample these values.
-
+af
     NOTE: traj[i,:] is sampled at time time[i,:]
 
     """
@@ -151,7 +164,7 @@ def load_eig_mode_double_pendulum(n, k, i):
         raise ValueError("The value of n should be 1 or 2")
 
     # Getting the name of the file we want load
-    filename = "Trajectories_DP_k_".join(str(k)).join(".mat")
+    filename = "Trajectories_DP_k_"+str(k)+".mat"
 
     # Get exact location of the file
     matfile_dir = os.path.join("DP_Eigenmodes/DP_Eigenmodes/", filename)

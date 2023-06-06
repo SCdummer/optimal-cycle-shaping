@@ -1,4 +1,4 @@
-from src.control.utils import dummy_trainloader, weighted_log_likelihood_loss
+from src.opt_limit_cycle_control.utils import dummy_trainloader, weighted_log_likelihood_loss
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
@@ -181,7 +181,7 @@ class OptEigManifoldLearner(pl.LightningModule):
         print('integral loss', integral_task_loss)
         print('                      ')
         # log training data
-        self.logger.experiment.log(
+        self.log_dict(
             {
                 'periodicity loss': periodicity_loss,
                 'integral task loss': integral_task_loss,

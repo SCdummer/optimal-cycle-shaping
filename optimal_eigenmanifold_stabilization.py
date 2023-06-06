@@ -316,46 +316,46 @@ fig.align_labels()
 
 
 
-if False:
-    # Check Distance plot:
-    k = 100 # spatial resolution CTRL-4 to comment, CTRL-5 to undo
-    d = (torch.arange(k+1).to(device)-k/2)/k*4 
-    d_x = d #+ u0[0,0]
-    d_y = d +1#+ u0[0,1]
-    DistFun = np.zeros((k+1,k+1))
-    for i in range(k):
-        for j in range(k):
-            QC = torch.tensor((d_x[i],d_y[j]),device=device).unsqueeze(0)
-            DistFun[j,i] = learn.model.f._min_d(QC) # This has to be in order (j,i), contourf takes first slot for y data, second slot for x data
 
-    X,Y = np.meshgrid(d_x.cpu().numpy(),d_y.cpu().numpy())
+# Check Distance plot:
+k = 100 # spatial resolution CTRL-4 to comment, CTRL-5 to undo
+d = (torch.arange(k+1).to(device)-k/2)/k*4
+d_x = d #+ u0[0,0]
+d_y = d +1#+ u0[0,1]
+DistFun = np.zeros((k+1,k+1))
+for i in range(k):
+    for j in range(k):
+        QC = torch.tensor((d_x[i],d_y[j]),device=device).unsqueeze(0)
+        DistFun[j,i] = learn.model.f._min_d(QC) # This has to be in order (j,i), contourf takes first slot for y data, second slot for x data
 
-    plt.figure()
-    plt.contourf(X,Y,DistFun,20)
-    q0 = xT_ctrl[:,0]; q1 = xT_ctrl[:,1]
-    plt.plot(q0,q1,'r--')
-    
-    fig = plt.figure()
-    ax = plt.axes()
-    ax.contourf(X,Y,DistFun,20)
-    p1 = ax.scatter(q0, q1, c=np.linspace(0, T.cpu()*n_Periods, xT.shape[0], endpoint=True), cmap='twilight', s=10)
-    pt0 = ax.scatter(q0[0], q1[0], s=30, color="none", edgecolor="blue")
-    ax.set_xlim(-2, 2)
-    ax.set_ylim(-1, 3)
-    plt.xlabel('$q_1$')
-    plt.ylabel('$q_2$')
-    cbar = fig.colorbar(p1)
-    cbar.set_label('time', rotation=90)
-    
-    
-    def psi(x0):
-        xT_ctrl = odeint(learn.model.f.to(device), x0.to(device),
-                         torch.linspace(0, 2, num_points).to(device), method='midpoint').squeeze(1).cpu().detach().numpy()
-        Q,P = traj_to_qp(xT_ctrl)
-        return torch.norm(torch.tensor(learn.model.f._phase_dist(Q[-1].to(device),P[-1].to(device))).to(device)).unsqueeze(0).unsqueeze(0) #- learn.model.f._phase_dist(Q[0].to(device),P[0].to(device))
-    
-    x0 = torch.cat([learn.u0, torch.zeros(learn.u0.size()).to(device)], dim=1).to(device)
-    dpsidx = numJ2(psi,x0,torch.tensor(1e-1).to(device))
+X,Y = np.meshgrid(d_x.cpu().numpy(),d_y.cpu().numpy())
+
+plt.figure()
+plt.contourf(X,Y,DistFun,20)
+q0 = xT_ctrl[:,0]; q1 = xT_ctrl[:,1]
+plt.plot(q0,q1,'r--')
+
+fig = plt.figure()
+ax = plt.axes()
+ax.contourf(X,Y,DistFun,20)
+p1 = ax.scatter(q0, q1, c=np.linspace(0, T.cpu()*n_Periods, xT.shape[0], endpoint=True), cmap='twilight', s=10)
+pt0 = ax.scatter(q0[0], q1[0], s=30, color="none", edgecolor="blue")
+ax.set_xlim(-2, 2)
+ax.set_ylim(-1, 3)
+plt.xlabel('$q_1$')
+plt.ylabel('$q_2$')
+cbar = fig.colorbar(p1)
+cbar.set_label('time', rotation=90)
+
+
+def psi(x0):
+    xT_ctrl = odeint(learn.model.f.to(device), x0.to(device),
+                     torch.linspace(0, 2, num_points).to(device), method='midpoint').squeeze(1).cpu().detach().numpy()
+    Q,P = traj_to_qp(xT_ctrl)
+    return torch.norm(torch.tensor(learn.model.f._phase_dist(Q[-1].to(device),P[-1].to(device))).to(device)).unsqueeze(0).unsqueeze(0) #- learn.model.f._phase_dist(Q[0].to(device),P[0].to(device))
+
+x0 = torch.cat([learn.u0, torch.zeros(learn.u0.size()).to(device)], dim=1).to(device)
+dpsidx = numJ2(psi,x0,torch.tensor(1e-1).to(device))
 
 
 #handles = plt.plot(AllTime,xT_ctrl[:,0],AllTime,xT_ctrl[:,1],AllTime,xT_ctrl[:,2],AllTime,xT_ctrl[:,3])

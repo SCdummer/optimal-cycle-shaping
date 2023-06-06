@@ -197,7 +197,7 @@ if __name__ == "__main__":
     if not os.path.isdir("Experiments"):
         os.mkdir("Experiments")
 
-    configuration = 1
+    configuration = 2
 
     if configuration == 1:
         target = torch.tensor([1.5, 1.5])
