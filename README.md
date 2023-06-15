@@ -1,1 +1,1 @@
-# optimal-cycle-shaping
+# Discovering Efficient Periodic Behaviours in Mechanical Systems via Neural Approximators

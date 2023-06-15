@@ -2,8 +2,10 @@ import sys
 sys.path.append('')
 
 from src.opt_limit_cycle_control.models import ControlledSystemDoublePendulum, AugmentedDynamicsDoublePendulum
-from src.opt_limit_cycle_control.learners import OptEigManifoldLearner, ControlEffort, CloseToPositions, \
-    CloseToPositionsAtTime, CloseToPositionAtHalfPeriod, CloseToActualPositionAtHalfPeriod
+# from src.opt_limit_cycle_control.learners import OptEigManifoldLearner, ControlEffort, CloseToPositions, \
+#     CloseToPositionsAtTime, CloseToPositionAtHalfPeriod, CloseToActualPositionAtHalfPeriod
+from src.opt_limit_cycle_control.learners import OptEigenManifoldLearner
+from src.opt_limit_cycle_control.losses import ControlEffort
 from src.opt_limit_cycle_control.utils import DummyDataModule
 from src.opt_limit_cycle_control.plotter import plot_trajectories, animate_single_dp_trajectory
 from src.opt_limit_cycle_control.layers import KernelRegression, KernelFunc, ReluKernel, FourierEncoding
@@ -35,11 +37,11 @@ lr = 1e-3# 1e-3
 spatial_dim = 2
 opt_strategy = 1
 l_period_k = 1.0
-alpha_p = 0.0
-alpha_s = 0.05
-alpha_mv = 0.95
-l_task_k = 0.0#1e-7
-l_task_2_k = 10
+alpha_1 = 0.01
+lambda_1 = 0.05
+lambda_2 = 0.95
+alpha_eff = 0.0#1e-7
+alpha_task = 10
 T_initial = 1.75
 T_requires_grad = False
 
@@ -49,23 +51,23 @@ l1, l2 = 1.0, 1.0
 # angular targets for q1 and q2
 use_target_angles = False
 
-config = {
-    "v_in": v_in,
-    "v_out": v_out,
-    "hdim": hdim,
-    "lr": lr,
-    "spatial_dim": spatial_dim,
-    "opt_strategy": opt_strategy,
-    "l_period_k": l_period_k,
-    "alpha_p": alpha_p,
-    "alpha_s": alpha_s,
-    "alpha_mv": alpha_mv,
-    "l_task_k": l_task_k,
-    "l_task_2_k": l_task_2_k,
-    "l1": l1,
-    "l2": l2,
-    "use_target_angles": use_target_angles
-}
+# config = {
+#     "v_in": v_in,
+#     "v_out": v_out,
+#     "hdim": hdim,
+#     "lr": lr,
+#     "spatial_dim": spatial_dim,
+#     "opt_strategy": opt_strategy,
+#     "l_period_k": l_period_k,
+#     "alpha_p": alpha_p,
+#     "alpha_s": alpha_s,
+#     "alpha_mv": alpha_mv,
+#     "l_task_k": l_task_k,
+#     "l_task_2_k": l_task_2_k,
+#     "l1": l1,
+#     "l2": l2,
+#     "use_target_angles": use_target_angles
+# }
 
 class Potential(nn.Module):
     def __init__(self, v_in, hdim):
@@ -97,49 +99,49 @@ V = nn.Sequential(
 
 #V = Potential(v_in, hdim)
 
-def compute_opt_eigenmode(target, u0_init, training_epochs, saving_dir, l_task_k, T_initial):
+def compute_opt_eigenmode(target, u0_init, training_epochs, saving_dir, alpha_eff, T_initial):
 
     # Create the model
     f = ControlledSystemDoublePendulum(V, T_initial=T_initial, T_requires_grad=T_requires_grad).to(device)
     aug_f = AugmentedDynamicsDoublePendulum(f, ControlEffort(f))
 
-    # Create the config file
-    config = {
-        "v_in": v_in,
-        "v_out": v_out,
-        "hdim": hdim,
-        "lr": lr,
-        "spatial_dim": spatial_dim,
-        "opt_strategy": opt_strategy,
-        "l_period_k": l_period_k,
-        "alpha_p": alpha_p,
-        "alpha_s": alpha_s,
-        "alpha_mv": alpha_mv,
-        "l_task_k": l_task_k,
-        "l_task_2_k": l_task_2_k,
-        "l1": l1,
-        "l2": l2,
-        "use_target_angles": use_target_angles,
-        "u0_init": tuple(u0_init),
-        "u0_requires_grad": False,
-        "target": (target[0].item(), target[1].item()),
-        "training_epochs": training_epochs,
-        "T_initial": T_initial
-    }
+    # # Create the config file
+    # config = {
+    #     "v_in": v_in,
+    #     "v_out": v_out,
+    #     "hdim": hdim,
+    #     "lr": lr,
+    #     "spatial_dim": spatial_dim,
+    #     "opt_strategy": opt_strategy,
+    #     "l_period_k": l_period_k,
+    #     "alpha_p": alpha_p,
+    #     "alpha_s": alpha_s,
+    #     "alpha_mv": alpha_mv,
+    #     "l_task_k": l_task_k,
+    #     "l_task_2_k": l_task_2_k,
+    #     "l1": l1,
+    #     "l2": l2,
+    #     "use_target_angles": use_target_angles,
+    #     "u0_init": tuple(u0_init),
+    #     "u0_requires_grad": False,
+    #     "target": (target[0].item(), target[1].item()),
+    #     "training_epochs": training_epochs,
+    #     "T_initial": T_initial
+    # }
 
     # Train the Energy shaping controller.
     if use_target_angles:
-        learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToPositionAtHalfPeriod(target),
-                                      l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
-                                      l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
-                                       spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
-                                      training_epochs=training_epochs) #u0_init = [-0.5, -0.5]
+        learn = OptEigenManifoldLearner(model=aug_f, use_target_angles=use_target_angles, target=target, l1=l1, l2=l2,
+                                        T=l_period_k, alpha_1=alpha_1, lambda_1=lambda_1, lambda_2=lambda_2,
+                                        alpha_eff=alpha_eff, alpha_task=alpha_task, opt_strategy=opt_strategy,
+                                        spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
+                                        training_epochs=training_epochs)
     else:
-        learn = OptEigManifoldLearner(model=aug_f, non_integral_task_loss_func=CloseToActualPositionAtHalfPeriod(target, l1, l2),
-                                      l_period=l_period_k, alpha_p=alpha_p, alpha_s=alpha_s, alpha_mv=alpha_mv,
-                                      l_task_loss=l_task_k, l_task_loss_2=l_task_2_k, opt_strategy=opt_strategy,
-                                      spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
-                                      training_epochs=training_epochs)
+        learn = OptEigenManifoldLearner(model=aug_f, use_target_angles=use_target_angles, target=target, l1=l1, l2=l2,
+                                        T=l_period_k, alpha_1=alpha_1, lambda_1=lambda_1, lambda_2=lambda_2,
+                                        alpha_eff=alpha_eff, alpha_task=alpha_task, opt_strategy=opt_strategy,
+                                        spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
+                                        training_epochs=training_epochs)
 
     logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
 
