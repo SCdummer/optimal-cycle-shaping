@@ -10,7 +10,7 @@ from src.opt_limit_cycle_control.learners import OptEigManifoldLearner, ControlE
 
 from src.opt_limit_cycle_control.utils import DummyDataModule, load_eig_mode_double_pendulum, interp_torch, traj_to_qp, find_orbit, numJ,numJ2
 from src.opt_limit_cycle_control.plotter import plot_trajectories, animate_single_dp_trajectory
-from src.opt_limit_cycle_control.layers import KernelRegression, KernelFunc, ReluKernel, FourierEncoding
+from src.opt_limit_cycle_control.layers import FourierEncoding
 
 
 import torch

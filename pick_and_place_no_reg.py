@@ -8,7 +8,7 @@ from src.opt_limit_cycle_control.learners import OptEigenManifoldLearner
 from src.opt_limit_cycle_control.losses import ControlEffort
 from src.opt_limit_cycle_control.utils import DummyDataModule
 from src.opt_limit_cycle_control.plotter import plot_trajectories, animate_single_dp_trajectory
-from src.opt_limit_cycle_control.layers import KernelRegression, KernelFunc, ReluKernel, FourierEncoding
+from src.opt_limit_cycle_control.layers import FourierEncoding
 
 import torch
 import torch.nn as nn
