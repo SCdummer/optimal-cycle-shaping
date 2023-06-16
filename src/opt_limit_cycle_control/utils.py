@@ -1,11 +1,8 @@
 import torch
 from torch.utils import data as data
-from torch.distributions import MultivariateNormal, Uniform, Normal
 from pytorch_lightning import LightningDataModule
-import numpy as np
 import os.path
 import scipy.io
-from scipy.interpolate import interp1d
 from src.opt_limit_cycle_control.torch_cubic_spline_interp import interp_func
 
 
@@ -41,98 +38,6 @@ def dummy_trainloader():
         shuffle=False
     )
     return dummy
-
-
-def log_likelihood_loss(x, target):
-    # negative log likelihood loss
-    return -torch.mean(target.log_prob(x))
-
-
-def weighted_log_likelihood_loss(x, target, weight):
-    # weighted negative log likelihood loss
-    log_prob = target.log_prob(x)
-    weighted_log_p = weight * log_prob
-    return -torch.mean(weighted_log_p.sum(1))
-
-
-def weighted_L2_loss(xh, x, weight):
-    # weighted squared error loss
-    e = xh - x
-    return torch.einsum('ij, jk, ik -> i', e, weight, e).mean()
-
-
-def prior_dist(q_min, q_max, p_min, p_max, device='cpu'):
-    # uniform "prior" distribution of initial conditions x(0)=[q(0),p(0)]
-    lb = torch.Tensor([q_min, p_min]).to(device)
-    ub = torch.Tensor([q_max, p_max]).to(device)
-    return Uniform(lb, ub)
-
-
-def target_dist(mu, sigma, device='cpu'):
-    # normal target distribution of terminal states x(T)
-    mu, sigma = torch.Tensor(mu).reshape(1, 2).to(device), torch.Tensor(sigma).reshape(1, 2).to(device)
-    return Normal(mu, torch.sqrt(sigma))
-
-
-def multinormal_target_dist(mu, sigma, device='cpu'):
-    # normal target distribution of terminal states x(T)
-    mu, sigma = torch.Tensor(mu).to(device), torch.Tensor(sigma).to(device)
-    return MultivariateNormal(mu, sigma*torch.eye(mu.shape[0]).to(device))
-
-
-def PoU_S1(q):
-    # Partition of unity for one chart of circle (other is 1 minus this)
-    return 1/2*(1+np.cos(q))
-
-
-def PoU_Sn(q_Sn):
-    # Extension of PoU_S1 to the 2**n chart-regions of the n-Torus
-    PoU_Raw_1 = PoU_S1(q_Sn);                                                   # PoUs for chart 1
-    PoU_Raw_2 = 1 - PoU_Raw_1;                                                  # PoUs for chart 2
-
-    n = len(q_Sn);            
-    PoU_Fin = np.ones((2**n));           
-    for i in range(n):
-        ind1 = ind(i,2**n);                                                     # components to be multiplied by PoU of chart 1
-        ind2 = ind1 + 2**(n-i-1);                                               # components to be multiplied by PoU of chart 2
-        for k in range(2**(n-1)):
-            PoU_Fin[int(ind1[k])] = PoU_Fin[int(ind1[k])]*PoU_Raw_1[i];
-            PoU_Fin[int(ind2[k])] = PoU_Fin[int(ind2[k])]*PoU_Raw_2[i];
-    
-    PoU_Fin = PoU_Fin/np.sum(PoU_Fin);                                          # normalization
-    
-    return PoU_Fin
-
-
-def ind(i,N):
-    if i == 0:
-        ind1 = np.array([i for i in range(int(N/2))])                           # first half
-    elif i > 0:
-        ind1 = ind(i-1,N/2);                                                    # find first half of first half
-        ind1 = np.concatenate((ind1,ind1+N/2))
-    return ind1
-
-
-def chart_Sn(q_Sn):
-    # local diffeomorphism: globally surjective, but not injective
-    q_1 = np.mod(q_Sn+np.pi, 2*np.pi)-np.pi;
-    q_2 = np.mod(q_Sn, 2*np.pi)-np.pi;
-    
-    n = len(q_Sn);            
-    q_all = np.ones((2**n,n));           
-    for i in range(n):
-        ind1 = ind(i,2**n);                                                     # components in chart 1
-        ind2 = ind1 + 2**(n-i-1);                                               # components in chart 2
-        for k in range(2**(n-1)):
-            q_all[int(ind1[k]),i] = q_1[i];
-            q_all[int(ind2[k]),i] = q_2[i];
-
-    return q_all
-
-
-def chart_inv_Sn(q_all):
-    # inverse unique if for all i: |q_Sn[i]| < pi  
-    return q_all[0,:]
 
 
 def load_eig_mode_double_pendulum(n, k, i):
@@ -207,15 +112,10 @@ af
 
     return time, traj
 
-def interp_via_scipy(x,y, device, kind='linear',axis=-1,copy=True,bounds_error=None,fill_value=np.nan,assume_sorted=False):
-    X = x.detach().cpu().numpy()
-    Y = y.detach().cpu().numpy()
-    fnp = interp1d(X,np.transpose(Y),kind=kind,axis=axis,copy=copy,bounds_error=bounds_error,fill_value=fill_value,assume_sorted=assume_sorted)
-    f = lambda x: torch.tensor(fnp(x.detach().cpu().numpy())).to(device).float().squeeze()
-    return f
 
 def interp_torch(x,y):
     return interp_func(x,y)
+
 
 def numJ(f,x,dx):
     "Numerical Jacobian Matrix using center difference"
@@ -225,6 +125,7 @@ def numJ(f,x,dx):
         dfdx[:,i] = (f(x+dx*I[:,i]) - f(x-dx*I[:,i]))/(2*dx)
     return dfdx
 
+
 def numJ2(f,x,dx):
     "Numerical Jacobian Matrix using center difference"
     nx, nf = x.squeeze().size(0), f(x).size(-1)#f(x).squeeze().size(-1)
@@ -233,16 +134,6 @@ def numJ2(f,x,dx):
         dfdx[:,i] = (f(x+dx*I[:,i]) - f(x-dx*I[:,i]))/(2*dx)
     return dfdx
 
-def find_orbit(f,x,dx,n=5):
-    # try n newton iterations to find fixed point x_ = f(x_)
-    x_ = 2*x/2
-    for i in range(n):
-        df_ = f(x_)-x_
-        dfdx = numJ(f,x,dx)
-        x_ = x - torch.inverse(dfdx)@df_
-    df_, df = f(x_)-x_, f(x)-x
-    choice = torch.where(torch.norm(df_)-torch.norm(df)<0,1,0)
-    return choice*x_ + torch.abs((choice-1))*x
 
 def cuberoot(coeff): 
     # Only returns one of the real solutions
@@ -260,6 +151,7 @@ def cuberoot(coeff):
     else:
         r = -d/c;
     return r
+
 
 def traj_to_qp(xT):
     xT = torch.tensor(xT)

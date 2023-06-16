@@ -12,7 +12,3 @@ class FourierEncoding(nn.Module):
         x:  batch_size x spatial_dim
         """
         return torch.cat([torch.sin(x), torch.cos(x)], dim=1)
-
-
-
-
