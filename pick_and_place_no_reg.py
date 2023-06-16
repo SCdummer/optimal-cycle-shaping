@@ -2,28 +2,22 @@ import sys
 sys.path.append('')
 
 from src.opt_limit_cycle_control.models import ControlledSystemDoublePendulum, AugmentedDynamicsDoublePendulum
-# from src.opt_limit_cycle_control.learners import OptEigManifoldLearner, ControlEffort, CloseToPositions, \
-#     CloseToPositionsAtTime, CloseToPositionAtHalfPeriod, CloseToActualPositionAtHalfPeriod
 from src.opt_limit_cycle_control.learners import OptEigenManifoldLearner
 from src.opt_limit_cycle_control.losses import ControlEffort
 from src.opt_limit_cycle_control.utils import DummyDataModule
-from src.opt_limit_cycle_control.plotter import plot_trajectories, animate_single_dp_trajectory
+from src.opt_limit_cycle_control.plotter import plot_trajectories
 from src.opt_limit_cycle_control.layers import FourierEncoding
 
 import torch
 import torch.nn as nn
 
 import pytorch_lightning as pl
-from pytorch_lightning.loggers import WandbLogger
 from torchdiffeq import odeint
 
 import numpy as np
 
 import os
 import json
-from datetime import datetime
-
-import math
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -31,121 +25,64 @@ print(device)
 # Define the parameters needed for the problem
 v_in = 2
 v_out = 2
-hdim = 256#100
-training_epochs = 500
-lr = 1e-3# 1e-3
 spatial_dim = 2
-opt_strategy = 1
-l_period_k = 1.0
-alpha_1 = 0.01
-lambda_1 = 0.05
-lambda_2 = 0.95
-alpha_eff = 0.0#1e-7
-alpha_task = 10
-T_initial = 1.75
-T_requires_grad = False
 
 # lengths of the pendulum bars
 l1, l2 = 1.0, 1.0
 
-# angular targets for q1 and q2
-use_target_angles = False
 
-# config = {
-#     "v_in": v_in,
-#     "v_out": v_out,
-#     "hdim": hdim,
-#     "lr": lr,
-#     "spatial_dim": spatial_dim,
-#     "opt_strategy": opt_strategy,
-#     "l_period_k": l_period_k,
-#     "alpha_p": alpha_p,
-#     "alpha_s": alpha_s,
-#     "alpha_mv": alpha_mv,
-#     "l_task_k": l_task_k,
-#     "l_task_2_k": l_task_2_k,
-#     "l1": l1,
-#     "l2": l2,
-#     "use_target_angles": use_target_angles
-# }
+def from_specs_to_variables(specs):
+    """"
+    This function takes the loaded specs.json file as input and assigns all the values to the relevant variables!
+    """
 
-class Potential(nn.Module):
-    def __init__(self, v_in, hdim):
-        super(Potential, self).__init__()
-        self.fourier = FourierEncoding(v_in)
-        self.l1 = nn.Linear(2 * v_in, hdim)
-        self.tanh1 = nn.Tanh()
-        self.l2 = nn.Linear(hdim, hdim)
-        self.tanh2 = nn.Tanh()
-        self.l3 = nn.Linear(hdim, hdim)
-        self.l4 = nn.Linear(hdim, 1)
+    hdim = specs["hdim"]
+    training_epochs = specs["epochs"]
+    lr = specs["lr"]
+    l_period_k = specs["l_period_k"]
+    alpha_1 = specs["alpha_1"]
+    lambda_1 = specs["lambda_1"]
+    lambda_2 = specs["lambda_2"]
+    alpha_eff = specs["alpha_eff"]
+    alpha_task = specs["alpha_task"]
+    T_initial = specs["T_initial"]
+    T_requires_grad = specs["T_requires_grad"]
+    target = torch.Tensor(specs["target"]).reshape(v_in, 1).to(device)
+    u0_init = specs["u0_init"]
+    use_target_angles = specs["use_target_angles"]
+    use_betascheduler = specs["use_betascheduler"]
 
-    def forward(self, x):
-        y = self.fourier(x)
-        y = self.l1(y)
-        y = self.tanh1(y)
-        y = self.tanh2(self.l2(y)) + y
-        return self.l4(y)
+    return hdim, training_epochs, lr, l_period_k, alpha_1, lambda_1, lambda_2, alpha_eff, alpha_task, T_initial, \
+           T_requires_grad, target, u0_init, use_target_angles, use_betascheduler
 
 
-# vector field parametrized by a NN
-V = nn.Sequential(
-    FourierEncoding(v_in),
-    nn.Linear(2 * v_in, hdim),
-    nn.Tanh(),
-    nn.Linear(hdim, hdim),
-    nn.Tanh(),
-    nn.Linear(hdim, 1))
+def compute_opt_eigenmode(specs, saving_dir):
 
-#V = Potential(v_in, hdim)
+    # Get the variable names from the specs.json file
+    hdim, training_epochs, lr, l_period_k, alpha_1, lambda_1, lambda_2, alpha_eff, alpha_task, T_initial, \
+    T_requires_grad, target, u0_init, use_target_angles, use_betascheduler = from_specs_to_variables(specs)
 
-def compute_opt_eigenmode(target, u0_init, training_epochs, saving_dir, alpha_eff, T_initial):
+    # Initialize the potential neural network
+    V = nn.Sequential(
+        FourierEncoding(v_in),
+        nn.Linear(2 * v_in, hdim),
+        nn.Tanh(),
+        nn.Linear(hdim, hdim),
+        nn.Tanh(),
+        nn.Linear(hdim, 1))
 
     # Create the model
     f = ControlledSystemDoublePendulum(V, T_initial=T_initial, T_requires_grad=T_requires_grad).to(device)
     aug_f = AugmentedDynamicsDoublePendulum(f, ControlEffort(f))
 
-    # # Create the config file
-    # config = {
-    #     "v_in": v_in,
-    #     "v_out": v_out,
-    #     "hdim": hdim,
-    #     "lr": lr,
-    #     "spatial_dim": spatial_dim,
-    #     "opt_strategy": opt_strategy,
-    #     "l_period_k": l_period_k,
-    #     "alpha_p": alpha_p,
-    #     "alpha_s": alpha_s,
-    #     "alpha_mv": alpha_mv,
-    #     "l_task_k": l_task_k,
-    #     "l_task_2_k": l_task_2_k,
-    #     "l1": l1,
-    #     "l2": l2,
-    #     "use_target_angles": use_target_angles,
-    #     "u0_init": tuple(u0_init),
-    #     "u0_requires_grad": False,
-    #     "target": (target[0].item(), target[1].item()),
-    #     "training_epochs": training_epochs,
-    #     "T_initial": T_initial
-    # }
-
     # Train the Energy shaping controller.
-    if use_target_angles:
-        learn = OptEigenManifoldLearner(model=aug_f, use_target_angles=use_target_angles, target=target, l1=l1, l2=l2,
-                                        T=l_period_k, alpha_1=alpha_1, lambda_1=lambda_1, lambda_2=lambda_2,
-                                        alpha_eff=alpha_eff, alpha_task=alpha_task, opt_strategy=opt_strategy,
-                                        spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
-                                        training_epochs=training_epochs)
-    else:
-        learn = OptEigenManifoldLearner(model=aug_f, use_target_angles=use_target_angles, target=target, l1=l1, l2=l2,
-                                        T=l_period_k, alpha_1=alpha_1, lambda_1=lambda_1, lambda_2=lambda_2,
-                                        alpha_eff=alpha_eff, alpha_task=alpha_task, opt_strategy=opt_strategy,
-                                        spatial_dim=spatial_dim, lr=lr, u0_init=u0_init, u0_requires_grad=False,
-                                        training_epochs=training_epochs)
+    learn = OptEigenManifoldLearner(model=aug_f, use_target_angles=use_target_angles, target=target, l1=l1, l2=l2,
+                                    T=T_initial, alpha_1=alpha_1, lambda_1=lambda_1, lambda_2=lambda_2,
+                                    alpha_eff=alpha_eff, alpha_task=alpha_task, spatial_dim=spatial_dim,
+                                    lr=lr, u0_init=u0_init, u0_requires_grad=False, training_epochs=training_epochs,
+                                    use_betascheduler=use_betascheduler)
 
-    logger = WandbLogger(project='optimal-cycle-shaping', name='pend_adjoint')
-
-    trainer = pl.Trainer(max_epochs=training_epochs, logger=logger, gpus=[0])
+    trainer = pl.Trainer(max_epochs=training_epochs, gpus=[0])
     datloader = DummyDataModule(7)
 
     print('Initial period:', learn.model.f.T[0])
@@ -159,93 +96,71 @@ def compute_opt_eigenmode(target, u0_init, training_epochs, saving_dir, alpha_ef
     print("\n Now creating the plots!")
 
     # Plotting the final results.
-    num_points = 1000
-    num_data = 200
-    angles = torch.cat([torch.linspace(-np.pi, np.pi, num_points).view(-1, 1), torch.linspace(-np.pi, np.pi, num_points).view(-1, 1)], dim=1)
 
+    # Getting a grid of angles with 200 points along each grid direction. q1 contains the first coordinate of each
+    # point in the grid and q2 contains the second coordinate of each point in the grid.
+    num_data = 200
     q1, q2 = torch.tensor(np.meshgrid(np.linspace(-np.pi, np.pi, num_data).astype('float32'), np.linspace(-np.pi, np.pi, num_data).astype('float32')))
 
+    # Reshape q1 and q2 into vectors and concatenate them into one vector
     q1 = q1.reshape((num_data*num_data, 1))
     q2 = q2.reshape((num_data*num_data, 1))
     q = torch.cat([q1, q2], dim=1)
 
+    # Calculate the eigenmode trajectory for 1000 time points between 0 and 1.
+    num_points = 1000
     with torch.no_grad():
         xT = odeint(learn.model.f.cuda(), torch.cat([learn.u0, torch.zeros(learn.u0.size()).cuda()], dim=1).cuda(),
                     torch.linspace(0, 1, num_points).cuda(), method='midpoint').squeeze(1).cpu().detach().numpy()
 
+    # Calculate the potential on the grid (q1, q2) (whose vectorized form is q!)
     vu = learn.model.f(torch.linspace(0, 1, num_points).cuda(), q.detach().cuda(), V_only=True).cuda().detach().cpu().numpy()
 
+    # Calculate the potential values along the eigenmode trajectory
     vu2 = learn.model.f(torch.linspace(0, 1, num_points).cuda(), torch.tensor(xT[..., 0:2]).detach().cuda(),
                        V_only=True).cuda().detach().cpu().numpy()
+
+    # Get the learned period of the eigenmode.
     T = learn.model.f.T[0].item()
+
+    # Create the desired plots
     plotting_dir = os.path.join(saving_dir, "Figures")
     plot_trajectories(xT=xT, target=target.reshape(1, -1).cpu(), V=vu[:, 0].reshape(num_data*num_data, 1),
-                      angles=angles.numpy().reshape(num_points, v_in), u=vu[:, -v_in:].reshape(num_data*num_data, v_in),
-                      l1=1, l2=1, pendulum=False, c_eff_penalty=l_task_k, T=T, q1=q1.cpu().numpy(),
+                      angles=None, u=None, l1=l1, l2=l2, c_eff_penalty=alpha_eff, T=T, q1=q1.cpu().numpy(),
                       q2=q2.cpu().numpy(), u2=vu2[:, -v_in:].reshape(num_points, v_in), plotting_dir=plotting_dir)
     print("Created and saved the plots")
 
     print("Saving the model")
     torch.save(learn.model.state_dict(), os.path.join(saving_dir, "model_state_dict.pt"))
 
-    print("Saving the hyperparameters and, if applicable, the learned initial condition in JSON format")
-    with open(os.path.join(saving_dir, 'config.json'), 'w') as f:
-        json.dump(config, f)
-
     print('Job is done!')
+
 
 if __name__ == "__main__":
 
-    if not os.path.isdir("Experiments"):
-        os.mkdir("Experiments")
+    # Define an argument parser
+    import argparse
 
-    configuration = 2
+    arg_parser = argparse.ArgumentParser(description="Find the eigenmode solving a pick-and-place task.")
 
-    if configuration == 1:
-        target = torch.tensor([1.5, 1.5])
-        u0_init = [0.0, 0.0]
+    arg_parser.add_argument(
+        "--experiment",
+        "-e",
+        dest="experiment_directory",
+        required=True,
+        help="The experiment directory. This directory should include "
+             + "experiment specifications in 'specs.json'")
 
-        training_epochs = [500, 500, 500, 500, 500, 500]
+    # Parse the arguments
+    args = arg_parser.parse_args()
 
-        l_task_k = [0.0, 0.0001, 0.0, 0.0001, 0.0, 0.0001]
-        T_initial = [1.75, 1.75, 2.5, 2.5, 3.0, 3.0]
-        hdim = 256
+    # Load the specs.json file
+    specs = json.load(open(os.path.join(args.experiment_directory, "specs.json")))
 
-    if configuration == 2:
-        target = torch.tensor([0.75, 0.75])
-        u0_init = [-0.5, -0.5]
+    # Create a subdirectory in the experiment directory called 'Figures'. After finishing training, some figures will be
+    # saved in this folder.
+    if not os.path.isdir(os.path.join(args.experiment_directory, "Figures")):
+        os.mkdir(os.path.join(args.experiment_directory, "Figures"))
 
-        training_epochs = [100, 100, 100, 100, 100, 100]
-
-        l_task_k = [0.0, 0.1, 0.01, 0.001, 0.0001, 0.00001]
-        T_initial = [1.5, 1.5, 1.5, 1.5, 1.5, 1.5]
-        hdim = 256
-
-    if configuration == 3:
-        target = torch.tensor([math.pi + 0.5, 0.0])
-        u0_init = [math.pi - 0.5, 0.0]
-
-        ### add other hyperparameters ###
-
-
-    for i in range(len(training_epochs)):
-        target = target.reshape(2, 1).to(device)
-
-        # Get the date and time the experiment started
-        now = datetime.now()
-        date_string = now.strftime("%d-%m-%Y_%Hh-%Mm-%Ss")
-
-        # Get the directory where to save things
-        main_dir = os.path.join("Experiments", "DoublePendulum_{}_{}_to_{}_{}_no_reg".format(u0_init[0], u0_init[1],
-                                                                                               target[0].item(),
-                                                                                               target[1].item()))
-
-        if not os.path.isdir(main_dir):
-            os.mkdir(main_dir)
-
-        saving_dir = os.path.join(main_dir, date_string)
-        if not os.path.isdir(saving_dir):
-            os.mkdir(saving_dir)
-            os.mkdir(os.path.join(saving_dir, "Figures"))
-
-        compute_opt_eigenmode(target, u0_init, training_epochs[i], saving_dir, l_task_k[i], T_initial[i])
+    # Find the eigenmode solving a pick-and-place task
+    compute_opt_eigenmode(specs, args.experiment_directory)

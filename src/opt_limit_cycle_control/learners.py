@@ -8,8 +8,8 @@ from src.opt_limit_cycle_control.losses import CloseToPositionAtHalfPeriod, Clos
 class OptEigenManifoldLearner(pl.LightningModule):
     def __init__(self, model: nn.Module, use_target_angles=True, target=None, l1=1.0, l2=1.0, T=1.0, alpha_1=1.0,
                  lambda_1=1.0, lambda_2=1.0, alpha_eff=1.0, alpha_task=1.0, lr=0.001, sensitivity='autograd',
-                 opt_strategy=1.0, spatial_dim=1, min_period=0, max_period=None, times=None, u0_init=None,
-                 u0_requires_grad=True,training_epochs=1, use_betascheduler=False):
+                 spatial_dim=1, min_period=0, max_period=None, times=None, u0_init=None, u0_requires_grad=True,
+                 training_epochs=1, use_betascheduler=False):
         super().__init__()
 
         self.model = model
@@ -42,7 +42,6 @@ class OptEigenManifoldLearner(pl.LightningModule):
         self.alpha_eff = alpha_eff
         self.alpha_task = alpha_task
         self.lr = lr
-        self.optimizer_strategy = opt_strategy
         self.half_period_index = None
         self.minT = min_period
         self.maxT = max_period
