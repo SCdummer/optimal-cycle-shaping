@@ -1,23 +1,19 @@
 import sys
 sys.path.append('')
 
-#from scipy.interpolate import interp1d
 
-
-from src.opt_limit_cycle_control.models import ControlledSystemNoDamping, AugmentedDynamics, ControlledSystemDoublePendulum, AugmentedDynamicsDoublePendulum, StabilizedSystemDoublePendulum, StabilizedSystemDoublePendulumCosimo
+from src.opt_limit_cycle_control.models import ControlledSystemDoublePendulum, AugmentedDynamicsDoublePendulum, StabilizedSystemDoublePendulum, StabilizedSystemDoublePendulumCosimo
 from src.opt_limit_cycle_control.learners import OptEigManifoldLearner, ControlEffort, CloseToPositions, \
     CloseToPositionsAtTime, CloseToPositionAtHalfPeriod, CloseToActualPositionAtHalfPeriod
 
-from src.opt_limit_cycle_control.utils import DummyDataModule, load_eig_mode_double_pendulum, interp_torch, traj_to_qp, find_orbit, numJ,numJ2
-from src.opt_limit_cycle_control.plotter import plot_trajectories, animate_single_dp_trajectory
+from src.opt_limit_cycle_control.utils import load_eig_mode_double_pendulum, interp_torch, traj_to_qp, numJ2
+from src.opt_limit_cycle_control.plotter import animate_single_dp_trajectory
 from src.opt_limit_cycle_control.layers import FourierEncoding
 
 
 import torch
 import torch.nn as nn
 
-import pytorch_lightning as pl
-from pytorch_lightning.loggers import WandbLogger
 from torchdiffeq import odeint
 
 import numpy as np
