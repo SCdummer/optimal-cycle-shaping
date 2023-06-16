@@ -268,7 +268,6 @@ class StabilizedSystemDoublePendulum(nn.Module):
         dq = self._q_t(self._t_min_d_q(q)) - q
         dp = Sig*p_fin - p
         return torch.cat((dq,dp),-1)
-        
     
     def _set_control_parameters(self, a_E,a_M,x_fun,x_num):
         self.a_E = a_E

@@ -51,16 +51,18 @@ def from_specs_to_variables(specs):
     u0_init = specs["u0_init"]
     use_target_angles = specs["use_target_angles"]
     use_betascheduler = specs["use_betascheduler"]
+    l1 = specs["l1"]
+    l2 = specs["l2"]
 
     return hdim, training_epochs, lr, l_period_k, alpha_1, lambda_1, lambda_2, alpha_eff, alpha_task, T_initial, \
-           T_requires_grad, target, u0_init, use_target_angles, use_betascheduler
+           T_requires_grad, target, u0_init, use_target_angles, use_betascheduler, l1, l2
 
 
 def compute_opt_eigenmode(specs, saving_dir):
 
     # Get the variable names from the specs.json file
     hdim, training_epochs, lr, l_period_k, alpha_1, lambda_1, lambda_2, alpha_eff, alpha_task, T_initial, \
-    T_requires_grad, target, u0_init, use_target_angles, use_betascheduler = from_specs_to_variables(specs)
+    T_requires_grad, target, u0_init, use_target_angles, use_betascheduler, l1, l2 = from_specs_to_variables(specs)
 
     # Initialize the potential neural network
     V = nn.Sequential(
