@@ -146,6 +146,11 @@ if __name__ == "__main__":
     # Parse the arguments
     args = arg_parser.parse_args()
 
+    # Define the folder where we will save the generated figures
+    save_dir = os.path.join(args.experiment_directory, "Figures", "Figures_stabilizing_controller")
+    if not os.path.isdir(save_dir):
+        os.mkdir(save_dir)
+
     # Load the specs.json file
     specs = json.load(open(os.path.join(args.experiment_directory, "specs.json")))
 
@@ -244,49 +249,59 @@ if __name__ == "__main__":
         xT_ctrl = odeint(f.to(device), x0,
                 torch.linspace(0, n_Periods, num_points).to(device), method='midpoint').squeeze(1).cpu().detach().numpy()
 
-    # Check energy:
+    # Get the coordinates q and the momenta p of the controlled trajectory
     Q,P = traj_to_qp(xT_ctrl)
+
+    # Initialize some quantities
     n = len(Q)
     E,AutE,Pot,Kin = torch.zeros(n),torch.zeros(n),torch.zeros(n),torch.zeros(n)
     E_des = f.E_des
     F= torch.zeros((n,2))
-    E_In = torch.zeros(n)
     TrajDist = torch.zeros(n)
     MomentumDiff = torch.zeros(n)
     DesiredPosition = torch.zeros((n,2))
     DesiredMomentum = torch.zeros((n,2))
+
+    # At every point in time of the controlled trajectory, calculate the full energy, the autonomous energy, the
+    # autonomous potential, the autonomous kinetic energy, the stabilizing control input, the distance to the desired
+    # eigenmode trajectory, the desired position, the desired momentum, and the difference between the actual momentum
+    # and the desired momentum
     for i in range(n):
         E[i] = f._energy(Q[i].to(device),P[i].to(device))
         AutE[i] = f._autonomous_energy(Q[i].to(device),P[i].to(device))
         Pot[i] = f._autonomous_potential(Q[i].to(device))
         Kin[i] = f._autonomous_kinetic(Q[i].to(device),P[i].to(device))
         F[i] = f._stabilizing_control(Q[i].to(device),P[i].to(device))
-        E_In[i] = torch.inner(F[i].to(device),P[i].to(device)@f._inv_mass_tensor(Q[i].to(device))) # E_In.sum()*T/n is the energy injected by the controller
         TrajDist[i] = f._min_d(Q[i].to(device))
         DesiredPosition[i] = f._q_des(Q[i].to(device))
         DesiredMomentum[i] = f._p_des_raw(Q[i].to(device),P[i].to(device))
         MomentumDiff[i] = torch.norm(DesiredMomentum[i]-P[i])
 
+    # Start generating and saving the plots
     AllTime_np = torch.linspace(0*T.detach().cpu().numpy()[0],n_Periods*T.detach().cpu().numpy()[0],num_points).detach().numpy();
     handles = plt.plot(AllTime_np,E.detach().cpu().numpy(),AllTime_np,AutE.detach().cpu().numpy(),AllTime_np,Pot.detach().cpu().numpy(),AllTime_np,Kin.detach().cpu().numpy())
-    plt.legend(handles,('Total Energy','Autonomous Energy', 'Autonomous Potential','Kinetic Energy'))
+    plt.legend(handles,('Total Energy','Autonomous Energy', 'Autonomous Potential', 'Kinetic Energy'))
     plt.ylabel('Energy in J')
     plt.xlabel('Time in s')
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_energy_vs_time.png"))
 
     plt.figure()
     plt.plot(AllTime_np,(E-E_des[0].cpu()).detach().cpu().numpy())
     plt.ylabel('$\Delta E$ in J')
     plt.xlabel('Time in s')
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_difference_energy_desired_energy_vs_time.png"))
 
     plt.figure()
     plt.plot(AllTime_np,TrajDist.detach().cpu().numpy())
     plt.xlabel('Time in s')
     plt.ylabel('$dist(q,q_{des})$')
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_dist_to_learned_eigenmode_q_vs_time.png"))
 
     plt.figure()
     plt.plot(AllTime_np,MomentumDiff.detach().cpu().numpy())
     plt.xlabel('Time in s')
     plt.ylabel('$ \|p - p_{des} \|_2$')
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_dist_to_learned_eigenmode_p_vs_time.png"))
 
     DesiredPosition = DesiredPosition.detach().cpu().numpy()
     DesiredMomentum = DesiredMomentum.detach().cpu().numpy()
@@ -294,7 +309,6 @@ if __name__ == "__main__":
     q1_des = DesiredPosition[:,1]
     p0_des = DesiredMomentum[:,0]
     p1_des = DesiredMomentum[:,1]
-
 
     ## Position and momentum in one large figure:
     plt.figure()
@@ -321,6 +335,8 @@ if __name__ == "__main__":
     axs[3].set( xlabel = 'Time in s', ylabel = '$kg m^2 rad/s$')
     axs[3].set_title('$p_2(t)$',loc='left')
     fig.align_labels()
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_states_"
+                                       "AND_desired_trajectory_states_vs_time.png"))
 
     #### Position:
     plt.figure()
@@ -342,6 +358,8 @@ if __name__ == "__main__":
     axs[1].set( xlabel = 'Time in s', ylabel = '$kg m^2 rad/s$')
 
     fig.align_labels()
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_coordinates_"
+                                       "AND_desired_trajectory_coordinates_vs_time.png"))
 
     #### Momentum:
     plt.figure()
@@ -359,12 +377,11 @@ if __name__ == "__main__":
     axs[1].set_title('$p_2(t)$',loc='left')
 
     fig.align_labels()
-
-
-
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_momenta_"
+                                       "AND_desired_trajectory_momenta_vs_time.png"))
 
     # Check Distance plot:
-    k = 100 # spatial resolution CTRL-4 to comment, CTRL-5 to undo
+    k = 100 # spatial resolution
     d = (torch.arange(k+1).to(device)-k/2)/k*4
     d_x = d #+ u0[0,0]
     d_y = d +1#+ u0[0,1]
@@ -380,6 +397,7 @@ if __name__ == "__main__":
     plt.contourf(X,Y,DistFun,20)
     q0 = xT_ctrl[:,0]; q1 = xT_ctrl[:,1]
     plt.plot(q0,q1,'r--')
+    plt.savefig(os.path.join(save_dir, "distance_to_eigenmode_and_coordinates_controlled_trajectory.png"))
 
     fig = plt.figure()
     ax = plt.axes()
@@ -392,27 +410,5 @@ if __name__ == "__main__":
     plt.ylabel('$q_2$')
     cbar = fig.colorbar(p1)
     cbar.set_label('time', rotation=90)
-
-
-    def psi(x0):
-        xT_ctrl = odeint(f.to(device), x0.to(device),
-                         torch.linspace(0, 2, num_points).to(device), method='midpoint').squeeze(1).cpu().detach().numpy()
-        Q,P = traj_to_qp(xT_ctrl)
-        return torch.norm(torch.tensor(f._phase_dist(Q[-1].to(device),P[-1].to(device))).to(device)).unsqueeze(0).unsqueeze(0) #- f._phase_dist(Q[0].to(device),P[0].to(device))
-
-    x0 = torch.cat([learn.u0, torch.zeros(learn.u0.size()).to(device)], dim=1).to(device)
-    dpsidx = numJ2(psi,x0,torch.tensor(1e-1).to(device))
-
-
-    #handles = plt.plot(AllTime,xT_ctrl[:,0],AllTime,xT_ctrl[:,1],AllTime,xT_ctrl[:,2],AllTime,xT_ctrl[:,3])
-    #plt.legend(handles, ('q1','q2', 'p1', 'p2'))
-    #plt.xlabel('Time')
-
-    # =============================================================================
-    #
-    # vu = f(torch.linspace(0, n_Periods, num_points).to(device), angles.detach().to(device), V_only=True).to(device).detach().cpu().numpy()
-    #
-    # plot_trajectories(xT=xT_ctrl, target=target.cpu(), V=vu[:, 0:v_in].reshape(num_points, v_in), angles=angles.numpy().reshape(num_points, v_in),
-    #                   u=vu[:, :v_in].reshape(num_points, v_in), l1=1, l2=1, pendulum=pendulum)
-    #
-    # =============================================================================
+    plt.savefig(os.path.join(save_dir, "distance_to_eigenmode_and_"
+                                       "coordinates_controlled_trajectory_colored_by_time.png"))
