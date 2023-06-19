@@ -158,7 +158,7 @@ if __name__ == "__main__":
     hdim, training_epochs, lr, l_period_k, alpha_1, lambda_1, lambda_2, alpha_eff, alpha_task, T_initial, \
     T_requires_grad, target, u0_init, use_target_angles, use_betascheduler, l1, l2 = from_specs_to_variables(specs)
 
-    # Set u0_requires_grad to false as it is set to false in pick_and_place_no_reg.py
+    # Set u0_requires_grad to false as it is set to false in learn_opt_eigenmode.py
     u0_requires_grad = False
 
     # Initialize the potential neural network
