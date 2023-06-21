@@ -3,7 +3,7 @@ sys.path.append('')
 
 
 from src.models import ControlledSystemDoublePendulum, AugmentedDynamicsDoublePendulum, \
-    StabilizedSystemDoublePendulum, StabilizedSystemDoublePendulumCosimo
+    StabilizedSystemDoublePendulum, StabilizedSystemDoublePendulumEnergyInjection
 from src.learners import OptEigenManifoldLearner
 
 from src.losses import ControlEffort
@@ -203,7 +203,7 @@ if __name__ == "__main__":
 
     # If we want to use the controller where the eigenmode stabilizing part CAN inject energy, define ...
     if args.eig_mode_stabillizing_controller_injects_energy:
-        f = StabilizedSystemDoublePendulumCosimo(V, a_M.to(device), a_E.to(device), x_fun_init).to(device) # Stabilizing controller may inject energy
+        f = StabilizedSystemDoublePendulumEnergyInjection(V, a_M.to(device), a_E.to(device), x_fun_init).to(device) # Stabilizing controller may inject energy
     else:
         f = StabilizedSystemDoublePendulum(V, a_M.to(device), a_E.to(device), x_fun_init).to(device)
 

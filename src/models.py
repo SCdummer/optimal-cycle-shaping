@@ -305,7 +305,11 @@ class StabilizedSystemDoublePendulum(nn.Module):
         return torch.tensor(((iM_11,iM_12),(iM_12,iM_22))).to(q)
 
 
-class StabilizedSystemDoublePendulumCosimo(nn.Module):
+class StabilizedSystemDoublePendulumEnergyInjection(nn.Module):
+    # In StabilizedSystemDoublePendulumEnergyInjection, the part of the controller that is concerned with the eigenmode
+    # stabilization INJECTS energy! In contrast, the eigenmode stabilizing part in StabilizedSystemDoublePendulum
+    # DOES NOT inject energy! NOTE: the class StabilizedSystemDoublePendulum corresponds to our novel controller.
+
     # Only changes in _stabilizing_control
     # Elastic Double Pendulum Model
     def __init__(self, V, a_M=torch.tensor(0.0), a_E=torch.tensor(0.0),x_fun = lambda t: torch.tensor((0, 0, 0, 0)).float(), x_num = torch.tensor(((0, 0, 0, 0),(0, 0, 0, 0))).float() ):
@@ -406,10 +410,18 @@ class StabilizedSystemDoublePendulumCosimo(nn.Module):
         
         p_des =(p_des_raw-p);                                                    #  torch.matmul(self._mass_tensor(q)*self._inv_mass_tensor(q_fin),p_des_raw) - p; # 
                                                                                  # UNPROJECTED VESION:  p_des = (p_des_raw-p) 
-                                                                                 # COSIMO'S ACTUAL VERSION: p_des = M(q)(dqdt_des - dqdt) = M(q)*M(q_des)^(-1)*p_des - p; 
+                                                                                 # COSIMO'S ACTUAL VERSION: p_des = M(q)(dqdt_des - dqdt) = M(q)*M(q_des)^(-1)*p_des - p;
                                                                                  #     or as code: torch.matmul(self._mass_tensor(q)*self._inv_mass_tensor(q_fin),p_des_raw) - p 
                                                                                  #     This did not work.
+                                                                                 # NOTE: With COSIMO'S version, we mean that we are talking about the stabilizing controller from:
+                                                                                 #
+                                                                                 # Filip Bjelonic, Arne Sachtler, Alin Albu-sch, and Cosimo Della Santina.
+                                                                                 # Experimental Closed-Loop Excitation of Nonlinear Normal Modes on an Elastic Industrial Robot.
+                                                                                 # pages 1–8, 2021.
+
         F_M = self.a_M*p_des;                                                    # Mode stabilizing control
+
+
         
         Diff_E = self.E_des - self._energy(q,p)
         F_E = self.a_E*Diff_E*p_hat;#*pnorm/(pnorm**2 + 1e-9);                   # Energy injection control
