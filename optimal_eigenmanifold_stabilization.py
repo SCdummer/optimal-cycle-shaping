@@ -2,12 +2,13 @@ import sys
 sys.path.append('')
 
 
-from src.opt_limit_cycle_control.models import ControlledSystemDoublePendulum, AugmentedDynamicsDoublePendulum, StabilizedSystemDoublePendulum, StabilizedSystemDoublePendulumCosimo
+from src.opt_limit_cycle_control.models import ControlledSystemDoublePendulum, AugmentedDynamicsDoublePendulum, \
+    StabilizedSystemDoublePendulum, StabilizedSystemDoublePendulumCosimo
 from src.opt_limit_cycle_control.learners import OptEigenManifoldLearner
 
 from src.opt_limit_cycle_control.losses import ControlEffort
 
-from src.opt_limit_cycle_control.utils import interp_torch, traj_to_qp, numJ2
+from src.opt_limit_cycle_control.utils import interp_torch, traj_to_qp
 from src.opt_limit_cycle_control.layers import FourierEncoding
 
 
