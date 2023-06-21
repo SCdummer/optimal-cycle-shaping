@@ -143,7 +143,7 @@ if __name__ == "__main__":
     # Define the folder where we will save the generated figures
     save_dir = os.path.join(args.experiment_directory, "Figures", "Figures_stabilizing_controller")
     if not os.path.isdir(save_dir):
-        os.mkdir(save_dir)
+        os.makedirs(save_dir)
 
     # Load the specs.json file
     specs = json.load(open(os.path.join(args.experiment_directory, "specs.json")))

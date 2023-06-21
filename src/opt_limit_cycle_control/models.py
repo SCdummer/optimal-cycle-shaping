@@ -218,8 +218,8 @@ class StabilizedSystemDoublePendulum(nn.Module):
     def _t_min_d_q(self, qc):
         #time of minimum approach of trajectory self._q_(t) from qc
         len_xnum = torch.tensor(self.x_num).size()[0]
-        i = torch.argmin(torch.norm(torch.tensor(self.x_num[:np.int(np.floor(len_xnum/2)),:2]).to(qc)-qc,dim=1))
-        # i = torch.argmin(torch.norm(torch.tensor(self.x_num[:np.int(len_xnum/2),:2]).to(qc)-qc,dim=1))
+        i = torch.argmin(torch.norm(torch.tensor(self.x_num[:int(np.floor(len_xnum/2)),:2]).to(qc)-qc,dim=1))
+        # i = torch.argmin(torch.norm(torch.tensor(self.x_num[:int(len_xnum/2),:2]).to(qc)-qc,dim=1))
         T_rough = self.T*i/torch.tensor(self.x_num[...,:2]).size()[0]
         Err_min = 1e-4
         q = self._q_t(T_rough);
@@ -426,8 +426,8 @@ class StabilizedSystemDoublePendulumCosimo(nn.Module):
     def _t_min_d_q(self, qc):
         #time of minimum approach of trajectory self._q_(t) from qc
         len_xnum = torch.tensor(self.x_num).size()[0]
-        i = torch.argmin(torch.norm(torch.tensor(self.x_num[:np.int(np.floor(len_xnum/2)),:2]).to(qc)-qc,dim=1))
-        # i = torch.argmin(torch.norm(torch.tensor(self.x_num[:np.int(len_xnum/2),:2]).to(qc)-qc,dim=1))
+        i = torch.argmin(torch.norm(torch.tensor(self.x_num[:int(np.floor(len_xnum/2)),:2]).to(qc)-qc,dim=1))
+        # i = torch.argmin(torch.norm(torch.tensor(self.x_num[:int(len_xnum/2),:2]).to(qc)-qc,dim=1))
         T_rough = self.T*i/torch.tensor(self.x_num[...,:2]).size()[0]
         Err_min = 1e-4
         q = self._q_t(T_rough);
