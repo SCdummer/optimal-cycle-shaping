@@ -1,0 +1,20 @@
+{
+    "hdim": 256,
+    "epochs": 20, 
+    "lr": 1e-3,
+    "l_period_k": 1.0,
+    "alpha_1": 0.01,
+    "lambda_1": 0.05,
+    "lambda_2": 0.95,
+    "alpha_eff": 0.001,
+    "alpha_task": 10,
+    "T_initial": 1.75,
+    "T_requires_grad": false,
+    "target": [0.75, 0.75],
+    "u0_init": [-0.5, -0.5],
+    "use_target_angles": false,
+    "use_betascheduler": true,
+    "l1": 1.0,
+    "l2": 1.0
+}
+  

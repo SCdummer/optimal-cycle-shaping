@@ -129,18 +129,11 @@ if __name__ == "__main__":
         type=float,
         help="The initial value of p2")
 
-    inject_energy_group = arg_parser.add_mutually_exclusive_group()
-    inject_energy_group.add_argument(
+    arg_parser.add_argument(
         '--injection_energy_eig_mode_stabillizing_controller',
         dest='eig_mode_stabillizing_controller_injects_energy',
         action='store_true',
         help="If specified, we use the controller where the eigenmode stabillizing part injects energy"
-    )
-    inject_energy_group.add_argument(
-        '--no_injection_energy_eig_mode_stabillizing_controller',
-        dest='eig_mode_stabillizing_controller_injects_energy',
-        action='store_false',
-        help="If specified, we use the controller where the eigenmode stabillizing part DOES NOT inject energy"
     )
     arg_parser.set_defaults(eig_mode_stabillizing_controller_injects_energy=False)
 

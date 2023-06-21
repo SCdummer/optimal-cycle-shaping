@@ -23,15 +23,30 @@ We solve the constructed optimisation problem via gradient-descent methods invol
 ## Learn optimal eigenmode
 
 ```bash
-python learn_opt_eigenmode.py 
+python learn_opt_eigenmode.py -e ${experiment_dir}
 ```
+The -e option corresponds to the path of the experiment directory. For instance, ```-e Experiments/example_experiment```.
+The experiment directory should at least contain a specs.json file specifying all the options needed for the experiment. 
+An example of a specs.json file is given in ```Experiments/example_experiment```. 
 
 ## Stabilize the system on the optimal oscillatory behaviour
 
 ```bash
-python stabilize_opt_eigenmode.py 
+python stabilize_opt_eigenmode.py -e ${experiment_dir}
 
 ```
+
+The above bash command only contains the required options. The optional arguments are:
+- ```-a_E```: the $\alpha_E$ stabilizing control parameter. 
+- ```-a_M```: the $\alpha_M$ stabilizing control parameter. 
+- ```-b```: the constant $b$ in the paper, which represents the amount of damping present in the system. 
+- ```-q0_1```: the starting value of the angle $q_1$ of our controlled trajectory.
+- ```-q0_2```: the starting value of the angle $q_2$ of our controlled trajectory.
+- ```-p0_1```: the starting value of the momentum of $q_1$ (so the starting value of $p_1$) of our controlled trajectory.
+- ```-p0_2```: the starting value of the momentum of $q_2$ (so the starting value of $p_2$) of our controlled trajectory.
+- ```--injection_energy_eig_mode_stabillizing_controller```: if this option is supplied, we use the controller discussed 
+in the paper where the eigenmode stabilizing part injects energy. If this option is not supplied, we use our novel 
+controller where the eigenmode stabilizing part does NOT inject energy. 
 
 ## Cite
 If you use this code in your own work, please cite our paper:
