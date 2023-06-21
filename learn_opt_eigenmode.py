@@ -1,12 +1,12 @@
 import sys
 sys.path.append('')
 
-from src.opt_limit_cycle_control.models import ControlledSystemDoublePendulum, AugmentedDynamicsDoublePendulum
-from src.opt_limit_cycle_control.learners import OptEigenManifoldLearner
-from src.opt_limit_cycle_control.losses import ControlEffort
-from src.opt_limit_cycle_control.utils import DummyDataModule
-from src.opt_limit_cycle_control.plotter import plot_trajectories
-from src.opt_limit_cycle_control.layers import FourierEncoding
+from src.models import ControlledSystemDoublePendulum, AugmentedDynamicsDoublePendulum
+from src.learners import OptEigenManifoldLearner
+from src.losses import ControlEffort
+from src.utils import DummyDataModule
+from src.plotter import plot_trajectories
+from src.layers import FourierEncoding
 
 import torch
 import torch.nn as nn

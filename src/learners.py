@@ -1,9 +1,9 @@
-from src.opt_limit_cycle_control.utils import dummy_trainloader
+from src.utils import dummy_trainloader
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
 from torchdiffeq import odeint, odeint_adjoint
-from src.opt_limit_cycle_control.losses import CloseToPositionAtHalfPeriod, CloseToActualPositionAtHalfPeriod, EigenmodeLoss
+from src.losses import CloseToPositionAtHalfPeriod, CloseToActualPositionAtHalfPeriod, EigenmodeLoss
 
 class OptEigenManifoldLearner(pl.LightningModule):
     def __init__(self, model: nn.Module, use_target_angles=True, target=None, l1=1.0, l2=1.0, T=1.0, alpha_1=1.0,

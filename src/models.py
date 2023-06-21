@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import grad as grad
 import numpy as np
-from src.opt_limit_cycle_control.utils import numJ, cuberoot
+from src.utils import numJ, cuberoot
 
 
 # parameters pendulum

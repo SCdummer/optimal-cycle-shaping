@@ -3,7 +3,7 @@ from torch.utils import data as data
 from pytorch_lightning import LightningDataModule
 import os.path
 import scipy.io
-from src.opt_limit_cycle_control.torch_cubic_spline_interp import interp_func
+from src.torch_cubic_spline_interp import interp_func
 
 
 class DummyDataModule(LightningDataModule):
