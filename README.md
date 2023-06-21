@@ -17,19 +17,19 @@ We solve the constructed optimisation problem via gradient-descent methods invol
 ## Requirements
 
 * Python 3.8
-* Pytorch (version 1.11 + CUDA 11.3)
+* Pytorch 
 * pip install -r requirements.txt
 
 ## Learn optimal eigenmode
 
 ```bash
-python name.py 
+python learn_opt_eigenmode.py 
 ```
 
 ## Stabilize the system on the optimal oscillatory behaviour
 
 ```bash
-python name2.py 
+python stabilize_opt_eigenmode.py 
 
 ```
 
