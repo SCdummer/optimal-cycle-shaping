@@ -126,7 +126,7 @@ def compute_opt_eigenmode(specs, saving_dir):
     T = learn.model.f.T[0].item()
 
     # Create the desired plots
-    plotting_dir = os.path.join(saving_dir, "Figures")
+    plotting_dir = os.path.join(saving_dir, "Figures", "Figures_eigenmode")
     plot_trajectories(xT=xT, target=target.reshape(1, -1).cpu(), V=vu[:, 0].reshape(num_data*num_data, 1),
                       angles=None, u=None, l1=l1, l2=l2, c_eff_penalty=alpha_eff, T=T, q1=q1.cpu().numpy(),
                       q2=q2.cpu().numpy(), u2=vu2[:, -v_in:].reshape(num_points, v_in), plotting_dir=plotting_dir)
@@ -159,10 +159,11 @@ if __name__ == "__main__":
     # Load the specs.json file
     specs = json.load(open(os.path.join(args.experiment_directory, "specs.json")))
 
-    # Create a subdirectory in the experiment directory called 'Figures'. After finishing training, some figures will be
-    # saved in this folder.
-    if not os.path.isdir(os.path.join(args.experiment_directory, "Figures")):
-        os.mkdir(os.path.join(args.experiment_directory, "Figures"))
+    # Create a subdirectory in the experiment directory called 'Figures'. Also make a subdirectory in the latter folder
+    # called 'Figures_eigenmode'. After finishing training, some figures will be saved in the subfolder
+    # 'Figures_eigenmode'.
+    if not os.path.isdir(os.path.join(args.experiment_directory, "Figures", "Figures_eigenmode")):
+        os.makedirs(os.path.join(args.experiment_directory, "Figures", "Figures_eigenmode"))
 
     # Find the eigenmode solving a pick-and-place task
     compute_opt_eigenmode(specs, args.experiment_directory)
