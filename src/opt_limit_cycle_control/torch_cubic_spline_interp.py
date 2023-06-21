@@ -4,6 +4,13 @@ https://stackoverflow.com/questions/61616810/how-to-do-cubic-spline-interpolatio
 retrieved 02.08.22
 '''
 
+'''
+This .py file contains code needed for interpolating a set of points {x_i, t_i}. More precisely, the code allows taking
+a set of points {x_i,t_i} and returning a function x(t) that interpolates them. This functionality is used for
+stabilize_opt_eigenmode.py and (in turn) in models.py via 'self.x_t' and 'x_fun' in the StabilizedSystemDoublePendulum
+class. 
+'''
+
 import torch as T
 
 def h_poly_helper(tt):
