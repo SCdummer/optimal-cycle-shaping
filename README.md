@@ -4,7 +4,8 @@ Code accompanying the paper:
 
 **Discovering Efficient Periodic Behaviours in Mechanical Systems via Neural Approximators**\
 Yannick Wotte, Sven Dummer, Nicolò Botteghi, Christoph Brune, Stefano Stramigioli, Federico Califano
-The can be found at: [Link](https://arxiv.org/pdf/2212.14253.pdf).
+
+The paper can be found at: [Link](https://arxiv.org/pdf/2212.14253.pdf).
 
 ![alt text](Figure_1.png)
 
@@ -23,7 +24,7 @@ The used python version and the used packages:
 * pytorch-lightning 1.5.10
 * matplotlib
 
-For our environments, we use conda. If one has conda installed, one can create the correct environment by the following
+For our environments, we use conda. If one has conda installed, one can create the correct environment via the following
 command:
 ```
 conda env create -f environment.yml
@@ -42,21 +43,26 @@ An example of a specs.json file is given in ```Experiments/example_experiment```
 
 ```bash
 python stabilize_opt_eigenmode.py -e ${experiment_dir}
-
 ```
 
 The above bash command only contains the required options. The optional arguments are:
-- ```-a_E float```: the $\alpha_E$ stabilizing control parameter. 
-- ```-a_M float```: the $\alpha_M$ stabilizing control parameter. 
-- ```-b float```: the constant $b$ in the paper, which represents the amount of damping present in the system. 
-- ```-q0_1 float```: the starting value of the angle $q_1$ of our controlled trajectory.
-- ```-q0_2 float```: the starting value of the angle $q_2$ of our controlled trajectory.
-- ```-p0_1 float```: the starting value of the momentum of $q_1$ (so the starting value of $p_1$) of our controlled trajectory.
-- ```-p0_2 float```: the starting value of the momentum of $q_2$ (so the starting value of $p_2$) of our controlled trajectory.
+- ```-a_E```: the $\alpha_E$ stabilizing control parameter. 
+- ```-a_M```: the $\alpha_M$ stabilizing control parameter. 
+- ```-b```: the constant $b$ in the paper, which represents the amount of damping present in the system. 
+- ```-q0_1```: the starting value of the angle $q_1$ of our controlled trajectory.
+- ```-q0_2```: the starting value of the angle $q_2$ of our controlled trajectory.
+- ```-p0_1```: the starting value of the momentum of $q_1$ (so the starting value of $p_1$) of our controlled trajectory.
+- ```-p0_2```: the starting value of the momentum of $q_2$ (so the starting value of $p_2$) of our controlled trajectory.
 - ```--injection_energy_eig_mode_stabillizing_controller```: if this option is supplied, we use the controller discussed 
 in the paper where the eigenmode stabilizing part injects energy. If this option is not supplied, we use our novel 
 controller where the eigenmode stabilizing part does NOT inject energy. **NOTE:** This option does not have an argument!
 So you just put e.g. ```python stabilize_opt_eigenmode.py -e ${experiment_dir} --injection_energy_eig_mode_stabillizing_controller```.
+
+An example using all the options:
+
+```bash
+python stabilize_opt_eigenmode.py -e Experiments/example_experiment -a_E 1 -a_M 10 -b 0.1 -q0_1 0.2 -q0_2 0.2 -p0_1 5 -p0_2 5 --injection_energy_eig_mode_stabillizing_controller
+```
 
 ## Cite
 If you use this code in your own work, please cite our paper:
