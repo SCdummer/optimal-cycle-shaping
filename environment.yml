@@ -1,4 +1,4 @@
-name: OptimCycleShaping_Final2
+name: OptimCycleShaping
 channels:
   - pytorch
   - defaults
