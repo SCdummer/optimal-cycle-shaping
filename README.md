@@ -23,7 +23,7 @@ The used python version and the used packages:
 * pytorch-lightning 1.5.10
 * matplotlib
 
-For our environments, we use conda. If one has conda installed, cne can create the correct environment by the following
+For our environments, we use conda. If one has conda installed, one can create the correct environment by the following
 command:
 ```
 conda env create -f environment.yml
