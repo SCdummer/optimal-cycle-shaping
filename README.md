@@ -56,7 +56,7 @@ The above bash command only contains the required options. The optional argument
 - ```--injection_energy_eig_mode_stabillizing_controller```: if this option is supplied, we use the controller discussed 
 in the paper where the eigenmode stabilizing part injects energy. If this option is not supplied, we use our novel 
 controller where the eigenmode stabilizing part does NOT inject energy. **NOTE:** This option does not have an argument!
-so you just put e.g. ```python stabilize_opt_eigenmode.py -e ${experiment_dir} --injection_energy_eig_mode_stabillizing_controller```.
+So you just put e.g. ```python stabilize_opt_eigenmode.py -e ${experiment_dir} --injection_energy_eig_mode_stabillizing_controller```.
 
 ## Cite
 If you use this code in your own work, please cite our paper:

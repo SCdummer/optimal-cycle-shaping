@@ -35,7 +35,6 @@ class OptEigenManifoldLearner(pl.LightningModule):
         self.times = times
         self.num_times = None if self.times is None else self.times.size(0)
         self.odeint = odeint if sensitivity == 'autograd' else odeint_adjoint
-        self.T = T
         self.alpha_1 = alpha_1
         self.lambda_1 = lambda_1
         self.lambda_2 = lambda_2
@@ -109,7 +108,7 @@ class OptEigenManifoldLearner(pl.LightningModule):
             indices = torch.randperm(self.half_period_index-1)[:num_sym_check_instances]
         else:
             indices = None
-        eigenmode_loss = self.T * self.eigenmode_loss.compute_loss(xT, indices)
+        eigenmode_loss = self.eigenmode_loss.compute_loss(xT, indices)
         control_effort_loss = self.alpha_eff * torch.abs(self.model.f.T[0]) * l[-1]
         task_loss = self.alpha_task * self.task_loss(xT)
 
