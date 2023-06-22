@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib.animation import FuncAnimation, PillowWriter
 import os
 
-def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T=1.0, q1=None, q2=None, u2=None, plotting_dir="Figures",
+def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, alpha_eff=0.0, T=1.0, q1=None, q2=None, u2=None, plotting_dir="Figures",
                       m1=1.0, m2=1.0, g=9.81, k2=0.5):
 
     fig = plt.figure()
@@ -46,7 +46,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.ylabel('y')
     cbar = fig.colorbar(p2)
     cbar.set_label('time', rotation=90)
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumTrajectory' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumTrajectory' + str(alpha_eff) + '.png'))
     ax.clear()
 
     p1 = ax.scatter(xT[:, 0], xT[:, 1] - xT[:, 0], c=np.linspace(0, T, xT.shape[0], endpoint=True), cmap='twilight', s=10)
@@ -57,7 +57,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     ax.set_ylim(ylimits[0], ylimits[1])
     plt.xlabel(r'$q_1$')
     plt.ylabel(r'$q_2$')
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumTrajectory_angles_over_time_' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumTrajectory_angles_over_time_' + str(alpha_eff) + '.png'))
     ax.clear()
 
     c1 = plt.cm.twilight(np.linspace(0, 1, xT.shape[0], endpoint=True))
@@ -82,7 +82,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
         results_dir = os.path.join(plotting_dir, 'Snapshots')
         if not os.path.isdir(results_dir):
             os.makedirs(results_dir)
-        plt.savefig(os.path.join(results_dir, 'DoublePendulumTrajectory_t='+str(i) + '_' + str(c_eff_penalty) + '.png'))
+        plt.savefig(os.path.join(results_dir, 'DoublePendulumTrajectory_t='+str(i) + '_' + str(alpha_eff) + '.png'))
     i = 999
     ax.clear()
     ax.set_xlim(-2.5, 2.5)
@@ -101,7 +101,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     results_dir = os.path.join(plotting_dir, 'Snapshots')
     if not os.path.isdir(results_dir):
         os.makedirs(results_dir)
-    plt.savefig(os.path.join(results_dir, 'DoublePendulumTrajectory_t=' + str(i) + '_' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(results_dir, 'DoublePendulumTrajectory_t=' + str(i) + '_' + str(alpha_eff) + '.png'))
 
     ### trajectory animation (gif)
     def animate(i, x1, x2, y1, y2, o, c1, c2, xt2, yt2):
@@ -122,7 +122,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
 
     gif = FuncAnimation(fig, animate, fargs=(x1, x2, y1, y2, o, c1, c2, xt2, yt2), blit=True, repeat=True,
                         frames=xT.shape[0], interval=1)
-    gif.save(os.path.join(plotting_dir, "DoublePendulumTrajectory_" + str(c_eff_penalty) + "_.gif"), dpi=150, writer=PillowWriter(fps=30))
+    gif.save(os.path.join(plotting_dir, "DoublePendulumTrajectory_" + str(alpha_eff) + "_.gif"), dpi=150, writer=PillowWriter(fps=30))
     ax.clear()
 
     ### Learned potential
@@ -134,7 +134,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     fig4.colorbar(p)
     plt.xlabel(r'$q_1$')
     plt.ylabel(r'$q_2$')
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_Potential' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_Potential' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     ### Spring Potential
@@ -146,7 +146,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     cbar = fig4.colorbar(p)
     plt.xlabel(r'$q_1$')
     plt.ylabel(r'$q_2$')
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SpringPotential' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SpringPotential' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     ### Gravitational Potential
@@ -158,7 +158,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     cbar = fig4.colorbar(p)
     plt.xlabel(r'$q_1$')
     plt.ylabel(r'$q_2$')
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GravityPotential' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GravityPotential' + str(alpha_eff) + '.png'))
     ax4.clear()
 
 
@@ -171,7 +171,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     cbar = fig4.colorbar(p)
     plt.xlabel(r'$q_1$')
     plt.ylabel(r'$q_2$')
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GravitySpringPotential' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GravitySpringPotential' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     ### Total Potential (Learned + Gravity + Spring)
@@ -183,7 +183,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     fig4.colorbar(p)
     plt.xlabel(r'$q_1$')
     plt.ylabel(r'$q_2$')
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_OverallPotential' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_OverallPotential' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     # grad potential wrt time
@@ -198,7 +198,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$u_1$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q1_' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q1_' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     # grad potential wrt time
@@ -211,7 +211,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$u_1$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q1_plot' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q1_plot' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     # grad potential wrt time
@@ -226,7 +226,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$u_2$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q2_' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q2_' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     # grad potential wrt time
@@ -239,7 +239,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$u_2$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q2_plot' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q2_plot' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     # grad potential wrt trajectory
@@ -252,7 +252,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel(r'$q_1$')
     plt.ylabel(r'$u_1$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q1_traj_plot' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q1_traj_plot' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     # grad potential wrt trajectory
@@ -265,7 +265,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel(r'$q_2$')
     plt.ylabel(r'$u_2$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q2_traj_plot' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_GradPotential_q2_traj_plot' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     # q1 against time
@@ -278,7 +278,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$q_1$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_q1_against_time_plot' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_q1_against_time_plot' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     # q2 against time
@@ -291,7 +291,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$q_2$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_q2_against_time_plot' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_q2_against_time_plot' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     t = np.linspace(0, 1 * T, u2.shape[0])
@@ -305,7 +305,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$||u_1||^2$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u1_' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u1_' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     t = np.linspace(0, 1 * T, u2.shape[0])
@@ -317,7 +317,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$||u_1||^2$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u1_plot' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u1_plot' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     t = np.linspace(0, 1 * T, u2.shape[0])
@@ -331,7 +331,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$||u_2||^2$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u2_' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u2_' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     t = np.linspace(0, 1 * T, u2.shape[0])
@@ -343,7 +343,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$||u_2||^2$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u2_plot' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u2_plot' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     t = np.linspace(0, 1 * T, u2.shape[0])
@@ -359,7 +359,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$||u||^2$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u1u2_' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u1u2_' + str(alpha_eff) + '.png'))
     ax4.clear()
 
     t = np.linspace(0, 1 * T, u2.shape[0])
@@ -373,7 +373,7 @@ def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, c_eff_penalty=0.0, T
     plt.xlabel('t')
     plt.ylabel(r'$||u||^2$')
     fig4.tight_layout()
-    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u1u2_plot' + str(c_eff_penalty) + '.png'))
+    plt.savefig(os.path.join(plotting_dir, 'DoublePendulumLearned_SquaredControlEffort_u1u2_plot' + str(alpha_eff) + '.png'))
     ax4.clear()
 
 
