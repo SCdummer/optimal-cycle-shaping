@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.animation import FuncAnimation, PillowWriter
 import os
+from matplotlib.ticker import FormatStrFormatter
+
 
 def plot_trajectories(xT, target, V, angles, u, l1=1, l2=2, alpha_eff=0.0, T=1.0, q1=None, q2=None, u2=None, plotting_dir="Figures",
                       m1=1.0, m2=1.0, g=9.81, k2=0.5):
@@ -412,3 +414,135 @@ def animate_single_dp_trajectory(xT_raw, l1=1, l2=1, plotting_dir="Figures"):
     gif = FuncAnimation(fig, animate, fargs=(x1, x2, y1, y2, o, c1, c2),
                         blit=True, repeat=True, frames=xT.shape[0], interval=1)
     gif.save(os.path.join(plotting_dir, "DoublePendulumEigenModeTrajectory.gif"), dpi=150, writer=PillowWriter(fps=30))
+
+
+def create_eigenmode_stabilization_plots(AllTime_np, xT, xT_ctrl, T, n_Periods, E, AutE, Pot, Kin, E_des,
+                                         DesiredPosition, DesiredMomentum, TrajDist, MomentumDiff, d_x, d_y, DistFun,
+                                         save_dir):
+
+    handles = plt.plot(AllTime_np, E.detach().cpu().numpy(), AllTime_np, AutE.detach().cpu().numpy(), AllTime_np,
+                       Pot.detach().cpu().numpy(), AllTime_np, Kin.detach().cpu().numpy())
+    plt.legend(handles, ('Total Energy', 'Autonomous Energy', 'Autonomous Potential', 'Kinetic Energy'))
+    plt.ylabel('Energy in J')
+    plt.xlabel('Time in s')
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_energy_vs_time.png"))
+
+    plt.figure()
+    plt.plot(AllTime_np, (E - E_des[0].cpu()).detach().cpu().numpy())
+    plt.ylabel('$\Delta E$ in J')
+    plt.xlabel('Time in s')
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_difference_energy_desired_energy_vs_time.png"))
+
+    plt.figure()
+    plt.plot(AllTime_np, TrajDist.detach().cpu().numpy())
+    plt.xlabel('Time in s')
+    plt.ylabel('$dist(q,q_{des})$')
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_dist_to_learned_eigenmode_q_vs_time.png"))
+
+    plt.figure()
+    plt.plot(AllTime_np, MomentumDiff.detach().cpu().numpy())
+    plt.xlabel('Time in s')
+    plt.ylabel('$ \|p - p_{des} \|_2$')
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_dist_to_learned_eigenmode_p_vs_time.png"))
+
+    DesiredPosition = DesiredPosition.detach().cpu().numpy()
+    DesiredMomentum = DesiredMomentum.detach().cpu().numpy()
+    q0_des = DesiredPosition[:, 0]
+    q1_des = DesiredPosition[:, 1]
+    p0_des = DesiredMomentum[:, 0]
+    p1_des = DesiredMomentum[:, 1]
+
+    ## Position and momentum in one large figure:
+    plt.figure()
+    fig, axs = plt.subplots(4, sharex=True)
+    fig.set_figheight(10)
+    h0 = axs[0].plot(AllTime_np, q0_des, AllTime_np, xT_ctrl[:, 0])
+    h1 = axs[1].plot(AllTime_np, q1_des, AllTime_np, xT_ctrl[:, 1])
+    h2 = axs[2].plot(AllTime_np, p0_des, AllTime_np, xT_ctrl[:, 2])
+    h3 = axs[3].plot(AllTime_np, p1_des, AllTime_np, xT_ctrl[:, 3])
+
+    axs[0].set(ylabel='rad')
+    axs[0].legend(h0, ('Desired value', 'Actual value'), loc='upper right')
+    axs[0].set_title('$q_1(t)$', loc='left')
+    axs[0].set_ylim(-1.5, 1)
+    axs[0].yaxis.set_major_formatter(FormatStrFormatter('%i'))
+    axs[0].yaxis.set_ticks(np.arange(-1, 2, 1))
+
+    axs[1].set(ylabel='rad')
+    axs[1].set_title('$q_2(t)$', loc='left')
+
+    axs[2].set(ylabel='$kg m^2 rad/s$')
+    axs[2].set_title('$p_1(t)$', loc='left')
+
+    axs[3].set(xlabel='Time in s', ylabel='$kg m^2 rad/s$')
+    axs[3].set_title('$p_2(t)$', loc='left')
+    fig.align_labels()
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_states_"
+                                       "AND_desired_trajectory_states_vs_time.png"))
+
+    #### Position:
+    plt.figure()
+    fig, axs = plt.subplots(2, sharex=True)
+    fig.set_figheight(5)
+
+    h0 = axs[0].plot(AllTime_np, q0_des, AllTime_np, xT_ctrl[:, 0])
+    h1 = axs[1].plot(AllTime_np, q1_des, AllTime_np, xT_ctrl[:, 1])
+
+    axs[0].set(ylabel='rad')
+    axs[0].legend(h0, ('Desired value', 'Actual value'), loc='upper right')
+    axs[0].set_title('$q_1(t)$', loc='left')
+    axs[0].set_ylim(-1.5, 1)
+    axs[0].yaxis.set_major_formatter(FormatStrFormatter('%i'))
+    axs[0].yaxis.set_ticks(np.arange(-1, 2, 1))
+
+    axs[1].set(ylabel='rad')
+    axs[1].set_title('$q_2(t)$', loc='left')
+    axs[1].set(xlabel='Time in s', ylabel='$kg m^2 rad/s$')
+
+    fig.align_labels()
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_coordinates_"
+                                       "AND_desired_trajectory_coordinates_vs_time.png"))
+
+    #### Momentum:
+    plt.figure()
+    fig, axs = plt.subplots(2, sharex=True)
+    fig.set_figheight(5)
+
+    h2 = axs[0].plot(AllTime_np, p0_des, AllTime_np, xT_ctrl[:, 2])
+    h3 = axs[1].plot(AllTime_np, p1_des, AllTime_np, xT_ctrl[:, 3])
+
+    axs[0].set(ylabel='$kg m^2 rad/s$')
+    axs[0].set_title('$p_1(t)$', loc='left')
+    axs[0].legend(h2, ('Desired value', 'Actual value'), loc='upper right')
+
+    axs[1].set(xlabel='Time in s', ylabel='$kg m^2 rad/s$')
+    axs[1].set_title('$p_2(t)$', loc='left')
+
+    fig.align_labels()
+    plt.savefig(os.path.join(save_dir, "controlled_trajectory_momenta_"
+                                       "AND_desired_trajectory_momenta_vs_time.png"))
+
+
+    X, Y = np.meshgrid(d_x.cpu().numpy(), d_y.cpu().numpy())
+
+    plt.figure()
+    plt.contourf(X, Y, DistFun, 20)
+    q0 = xT_ctrl[:, 0];
+    q1 = xT_ctrl[:, 1]
+    plt.plot(q0, q1, 'r--')
+    plt.savefig(os.path.join(save_dir, "distance_to_eigenmode_and_coordinates_controlled_trajectory.png"))
+
+    fig = plt.figure()
+    ax = plt.axes()
+    ax.contourf(X, Y, DistFun, 20)
+    p1 = ax.scatter(q0, q1, c=np.linspace(0, T.cpu() * n_Periods, xT.shape[0], endpoint=True), cmap='twilight', s=10)
+    pt0 = ax.scatter(q0[0], q1[0], s=30, color="none", edgecolor="blue")
+    ax.set_xlim(-2, 2)
+    ax.set_ylim(-1, 3)
+    plt.xlabel('$q_1$')
+    plt.ylabel('$q_2$')
+    cbar = fig.colorbar(p1)
+    cbar.set_label('time', rotation=90)
+    plt.savefig(os.path.join(save_dir, "distance_to_eigenmode_and_"
+                                       "coordinates_controlled_trajectory_colored_by_time.png"))
+
