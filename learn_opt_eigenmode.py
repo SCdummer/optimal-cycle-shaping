@@ -85,7 +85,7 @@ def compute_opt_eigenmode(specs, saving_dir):
                                     use_betascheduler=use_betascheduler)
 
     trainer = pl.Trainer(max_epochs=training_epochs, gpus=[0])
-    datloader = DummyDataModule(7)
+    datloader = DummyDataModule(1)
 
     print('Initial period:', learn.model.f.T[0])
     print('Initial Initial position:', learn.u0[0])

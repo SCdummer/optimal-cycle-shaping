@@ -45,7 +45,6 @@ class OptEigenManifoldLearner(pl.LightningModule):
         self.minT = min_period
         self.maxT = max_period
         self.epoch = 0
-        self.count = 0
         self.discretization_steps = 100
         self.training_epochs = training_epochs
         self.use_betascheduler = use_betascheduler
@@ -94,9 +93,7 @@ class OptEigenManifoldLearner(pl.LightningModule):
         return beta
 
     def training_step(self, batch, batch_idx):
-        if self.count % 7 == 0:
-            self.epoch += 1
-        self.count += 1
+        self.epoch += 1
 
         init_cond = torch.cat([self.u0, torch.zeros(1, self.spatial_dim + 1).cuda()], dim=1)
         xTl = self.forward(init_cond)

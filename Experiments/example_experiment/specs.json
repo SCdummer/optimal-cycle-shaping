@@ -1,6 +1,6 @@
 {
     "hdim": 256,
-    "epochs": 100,
+    "epochs": 700,
     "lr": 1e-3,
     "l_period_k": 1.0,
     "alpha_1": 0.01,
