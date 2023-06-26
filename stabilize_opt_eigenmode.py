@@ -163,7 +163,7 @@ if __name__ == "__main__":
         nn.Linear(hdim, 1)).to(device)
 
     # Load the double pendulum model
-    f = ControlledSystemDoublePendulum(V, T_initial=1.0, T_requires_grad=False)
+    f = ControlledSystemDoublePendulum(V, T_initial=specs["T_initial"], T_requires_grad=False)
     aug_f = AugmentedDynamicsDoublePendulum(f, ControlEffort(f))
     learn = OptEigenManifoldLearner(model=aug_f, use_target_angles=use_target_angles, target=target, l1=l1, l2=l2,
                                     T=T_initial, alpha_1=alpha_1, lambda_1=lambda_1, lambda_2=lambda_2,
