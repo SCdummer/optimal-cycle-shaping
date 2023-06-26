@@ -73,5 +73,4 @@ article{wotte2022discovering,
   journal={arXiv preprint arXiv:2212.14253},
   year={2022}
 }
-
 ```
