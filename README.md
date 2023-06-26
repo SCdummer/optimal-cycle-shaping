@@ -3,7 +3,7 @@
 Code accompanying the paper:
 
 **Discovering Efficient Periodic Behaviours in Mechanical Systems via Neural Approximators**\
-Yannick Wotte, Sven Dummer, Nicolò Botteghi, Christoph Brune, Stefano Stramigioli, Federico Califano
+Yannik Wotte, Sven Dummer, Nicolò Botteghi, Christoph Brune, Stefano Stramigioli, Federico Califano
 
 The paper can be found at: [Link](https://arxiv.org/pdf/2212.14253.pdf).
 
